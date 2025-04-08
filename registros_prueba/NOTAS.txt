@@ -1,0 +1,2 @@
+- Frecuencia de muestreo: 512Hz
+- Se repite sesión de movimientos imaginados porque el sujeto "se quedóm dormido" en la sesión anterior. Sólo se imaginan 5 movimientos por mano.

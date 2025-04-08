@@ -1,0 +1,2 @@
+,sujeto,eeg_file,bad_channels,bad_muscle_components,bad_eog_components,alpha_components
+Run2_TipoSesion2,sujeto_1\,sujeto1_imag_2.hdf5,FP1-FP2-AF7-AF8-F6-F8,5-17-18-19-23-26-28-29,0-1-4-6-8,13-14

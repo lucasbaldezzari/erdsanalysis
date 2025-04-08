@@ -1,0 +1,1 @@
+- Sería interesante replicar la forma que procesaron los datos en el artículo "2011 - Event-related (De)synchronization (ERDERS) during motor imagery tasks Implications for brainecomputer interfaces"
