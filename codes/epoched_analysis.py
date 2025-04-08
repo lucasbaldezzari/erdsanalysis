@@ -100,7 +100,7 @@ eeg_cleaned = eeg_concatenados.copy().filter(l_freq=1.0, h_freq=40, fir_design='
 
 ## ************************ SEPARANDO EN ÉPOCAS ************************
 ##epching de eeg_concatenados
-tmin, tmax = -1, 3
+tmin, tmax = -0.5, 2
 event_ids = dict(IZQUIERDA=1, DERECHA=2)
 epocas_concatenadas = mne.Epochs(eeg_cleaned, event_id=["IZQUIERDA", "DERECHA"],
                                  tmin=tmin-0.5, tmax=tmax+0.5,
@@ -129,15 +129,19 @@ epocas_concatenadas["DERECHA"].plot(scalings = 40,show=True, block=True,
                                       events=eventos, event_id=event_ids,
                                       event_color=dict(IZQUIERDA="red", DERECHA="blue"))
 
+## ************************ TRIALS TO REMOVE ************************
+trials_to_remove = [0,8,22]
+epocas_concatenadas.drop(trials_to_remove, reason="Bad trial", verbose=True)
+
 ## ************************ GRÁFICO DE PSD ************************
 epocas_concatenadas.plot_psd(show=True,picks=["C1","C3","C2","C4"],fmax=40,proj=True)
 epocas_concatenadas["IZQUIERDA"].plot_psd(show=True,picks=["C1","C3","C2","C4"],fmax=40,proj=True)
 epocas_concatenadas["DERECHA"].plot_psd(show=True,picks=["C1","C3","C2","C4"],fmax=40,proj=True)
 
 bands = {"Mu":(8,12), "Beta":(12,30)}
-epocas_concatenadas["IZQUIERDA"].plot_psd_topomap(show=True,fmax=40,proj=True,tmin=0,tmax=1,bands=bands,cmap="RdBu_r",colorbar=False)
+epocas_concatenadas["DERECHA"].plot_psd_topomap(show=True,fmax=40,proj=True,tmin=0,tmax=1,bands=bands,cmap="RdBu_r",colorbar=False)
 
-epocas_concatenadas["IZQUIERDA"].plot_image(picks=["C1","C2"], cmap="RdBu_r")
+epocas_concatenadas["DERECHA"].plot_image(picks=["C1","C2"], cmap="RdBu_r")
 
 ##graficos de los canales
 # epocas_concatenadas.plot_sensors(kind="3d", ch_type="all")

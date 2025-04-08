@@ -32,7 +32,7 @@ ch_names = [ch for ch in ch_names if ch not in channels_to_remove]
 
 ##Datos del sujeto y la sesión
 n_sujeto = 1
-run = 1 ##NÚMERO DE RUN 1 o 2
+run = 2 ##NÚMERO DE RUN 1 o 2
 sesion = 2 #1 ejecutado, 2 imaginado
 rootpath = "datasets\\"
 sujeto = f"sujeto_{n_sujeto}\\"
@@ -73,7 +73,7 @@ plotEEG(noisy_eeg_data, scalings = 40,show=True, block=True,
         highpass=1, lowpass=40, title="Original filtrada en 1-40Hz para analisis de rechazo de canales")
 
 ##Luego de la inspección se decide eliminar los siguientes canales:
-bad_channels = ["AF7","AF8","T7","T8","F9"]
+bad_channels = ["FP1","FP2","AF7","AF8","T7","T8"]
 
 noisy_eeg_data.drop_channels(bad_channels, "ignore") ##removemos los canales que no sirven
 
@@ -128,11 +128,13 @@ ica.plot_sources(epocas, title="Epocas completas")##ploteo para las epocas
 ica.plot_sources(epocas["IZQUIERDA"], title = "Sólo épocas IZQUIERDA")##ploteo para las epocas izquierda
 ica.plot_sources(epocas["DERECHA"], title = "Sólo épocas DERECHA")##ploteo para las epocas derecha
 
-muscle_exclude = [3,6,8,14,15,21,23,26,17,16,18,27,9,10]
-eog_exclude = [0,27]
-dudosos_exclude = [18,9,10,25,26,27]
+muscle_exclude = ica.find_bads_muscle(eeg_data)[0]#[3,6,8,14,15,21,23,26,17,16,18,27,9,10]
+eog_exclude = [5,6,0]
+ecg_exclude = []
+other_exclude = []
+dudosos_exclude = []
 
-alpha_occipital = [7,4]
+alpha_occipital = []
 erd_possible = []
 
 """
@@ -142,10 +144,13 @@ Podemos plotear las properties para la señal completa o para las epocas.
 Esta fase nos sirve para evaluar en mayor profundidad aquellos componentes que se consideran artefactos o ritmos de interés.
 """
 
-# ica.plot_properties(eeg_data, picks=dudosos_exclude, psd_args={'fmax': 100.}, image_args={'sigma': 1.})
-# ica.plot_properties(epocas, picks=dudosos_exclude, psd_args={'fmax': 100.}, image_args={'sigma': 1.})
+# ica.plot_properties(eeg_data, picks=muscle_exclude, psd_args={'fmax': 100.}, image_args={'sigma': 1.})
+ica.plot_properties(epocas, picks=muscle_exclude, psd_args={'fmax': 100.}, image_args={'sigma': 1.})
 
-to_exclude = muscle_exclude+eog_exclude#+alpha_occipital
+remove_idx_muscle = []
+muscle_exclude = [compt for compt in muscle_exclude if compt not in remove_idx_muscle]
+
+to_exclude = muscle_exclude+eog_exclude+ecg_exclude#+alpha_occipital
 
 ##usamos overlay para ver que tanto se modifica la señal al eliminar los componentes
 ica.plot_overlay(eeg_data, exclude=to_exclude) 
@@ -218,8 +223,9 @@ eeg_data_reconstructed.drop_channels(bad_channels_2, "ignore") ##removemos los c
 """
 La inspección en el punto 6 podría dar lugar a eliminar trials que no son de interés o que son ruido.
 """
-dict_izq = {"IZQUIERDA": []} #trials a eliminar de la clase IZQUIERDA
-dict_der = {"DERECHA": []} #trials a eliminar de la clase DERECHA
+trials_to_remove = [2]
+
+epocas_reconstructed.drop(trials_to_remove, reason="Ruido") ##eliminamos los trials que no sirven
 
 ### *********************** 9. GUARDANDO EL MODELO ICA ************************
 ##guardamos el modelo ICA
@@ -233,7 +239,7 @@ import os
 if os.path.exists(root_path+df_file):
     df = pd.read_csv(root_path+df_file,index_col=0)
 else:
-    df = pd.DataFrame(columns=["sujeto","eeg_file","bad_channels","bad_muscle_components","bad_eog_components","alpha_components"])
+    df = pd.DataFrame(columns=["sujeto","eeg_file","bad_channels","bad_muscle_components","bad_eog_components","alpha_components","trials_to_remove"])
 
 ##agregamos la info al dataframe
 index = f"Run{run}_TipoSesion{sesion}"
@@ -243,8 +249,10 @@ muscle_exclude_formatted = '-'.join([f"{compt}" for compt in muscle_exclude])
 eog_exclude_formatted = '-'.join([f"{compt}" for compt in eog_exclude])
 alpha_occipital_formatted = '-'.join([f"{compt}" for compt in alpha_occipital])
 formatted_muscle_components = '-'.join([f"{compt}" for compt in muscle_exclude])
+formatted_trials_to_remove = '-'.join([f"{trial}" for trial in trials_to_remove])
 
 df.loc[index] = [sujeto,eeg_file,formatted_channels,
-                 muscle_exclude_formatted,eog_exclude_formatted,alpha_occipital_formatted]
+                 muscle_exclude_formatted,eog_exclude_formatted,alpha_occipital_formatted,
+                 formatted_trials_to_remove]
 ##guardamos el dataframe
 df.to_csv(root_path+df_file, index=True)
