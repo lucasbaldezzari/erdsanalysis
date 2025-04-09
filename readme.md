@@ -31,9 +31,11 @@ Se realiza una inspección visual inicial para evaluar el estado general de los 
 
 Los canales identificados como ruidosos (e.g. "AF7", "AF8", "T7", "T8", "F9") son descartados.
 
-**IMPORTANTE:** Lo que se debe hacer en primer lugar es cargar todas las señales correspondientes a una sesión, por ejemplo los dos runs correspondientes a la sesión 1. Lugo, evaluar visualmente qué canales deben eliminarse para ambos registros, y en base a esto, armar una única lista con los canales a eliminar.
+#### Eliminación de canales
 
-Esta remoción de canales será usada en ambos registros para aplicar el punto 3 en adelante, por cada registro por separado.
+Lo que se recomienda hacer en primer lugar es cargar todas las señales correspondientes a una sesión, por ejemplo, los dos runs correspondientes a la sesión 1. Lugo, evaluar visualmente qué canales deben eliminarse para ambos registros, y en base a esto, armar una única lista con los canales a eliminar.
+
+Luego, usar esta lista de canales malos para aplicar los puntos 3 en adelante para ambos registros por separado.
 
 3. **Filtrado en Frecuencia**
 
