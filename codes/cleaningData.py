@@ -33,7 +33,7 @@ ch_names = [ch for ch in ch_names if ch not in channels_to_remove]
 ##Datos del sujeto y la sesión
 n_sujeto = 1
 run = 2 ##NÚMERO DE RUN 1 o 2
-sesion = 2 #1 ejecutado, 2 imaginado
+sesion = 1 #1 ejecutado, 2 imaginado
 rootpath = "datasets\\"
 sujeto = f"sujeto_{n_sujeto}\\"
 tarea = "ejec" if sesion == 1 else "imag" ##tarea ejecutada o imaginada
@@ -128,8 +128,8 @@ ica.plot_sources(epocas, title="Epocas completas")##ploteo para las epocas
 ica.plot_sources(epocas["IZQUIERDA"], title = "Sólo épocas IZQUIERDA")##ploteo para las epocas izquierda
 ica.plot_sources(epocas["DERECHA"], title = "Sólo épocas DERECHA")##ploteo para las epocas derecha
 
-muscle_exclude = ica.find_bads_muscle(eeg_data)[0]#[3,6,8,14,15,21,23,26,17,16,18,27,9,10]
-eog_exclude = [5,6,0]
+muscle_exclude = ica.find_bads_muscle(eeg_data)[0]
+eog_exclude = [0,2]
 ecg_exclude = []
 other_exclude = []
 dudosos_exclude = []
@@ -223,7 +223,7 @@ eeg_data_reconstructed.drop_channels(bad_channels_2, "ignore") ##removemos los c
 """
 La inspección en el punto 6 podría dar lugar a eliminar trials que no son de interés o que son ruido.
 """
-trials_to_remove = [2]
+trials_to_remove = []
 
 epocas_reconstructed.drop(trials_to_remove, reason="Ruido") ##eliminamos los trials que no sirven
 
