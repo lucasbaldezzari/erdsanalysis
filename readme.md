@@ -31,6 +31,10 @@ Se realiza una inspección visual inicial para evaluar el estado general de los 
 
 Los canales identificados como ruidosos (e.g. "AF7", "AF8", "T7", "T8", "F9") son descartados.
 
+**IMPORTANTE:** Lo que se debe hacer en primer lugar es cargar todas las señales correspondientes a una sesión, por ejemplo los dos runs correspondientes a la sesión 1. Lugo, evaluar visualmente qué canales deben eliminarse para ambos registros, y en base a esto, armar una única lista con los canales a eliminar.
+
+Esta remoción de canales será usada en ambos registros para aplicar el punto 3 en adelante, por cada registro por separado.
+
 3. **Filtrado en Frecuencia**
 
 La señal es filtrada usando un filtro pasa-altos de 1 Hz para mejorar el desempeño del ICA, siguiendo las recomendaciones prácticas de MNE-Python.
