@@ -27,9 +27,9 @@ Se carga el archivo EEG, descartando canales específicos (A1, A2), y los evento
 
 Se genera un objeto Raw de MNE con datos originales.
 
-Se realiza una inspección visual inicial para evaluar el estado general de los canales y determinar aquellos con mala impedancia o mucho ruido visual.
+Se realiza una inspección visual inicial para evaluar el estado general de los canales y determinar aquellos con mala impedancia o mucho artefacto detectable.
 
-Los canales identificados como ruidosos (e.g. "AF7", "AF8", "T7", "T8", "F9") son descartados.
+Los canales identificados como ruidosos (e.g. "AF7", "AF8", "T7", "T8", "F9") serán descartados antes de aplicar ICA.
 
 #### Eliminación de canales
 

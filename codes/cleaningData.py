@@ -73,7 +73,7 @@ plotEEG(noisy_eeg_data, scalings = 40,show=True, block=True,
         highpass=1, lowpass=40, title="Original filtrada en 1-40Hz para analisis de rechazo de canales")
 
 ##Luego de la inspección se decide eliminar los siguientes canales:
-bad_channels = ["T7","F9","F10","AF7","AF8","FP1","FP2"]
+bad_channels = ["T7","F9","F10","AF7","AF8"]
 
 noisy_eeg_data.drop_channels(bad_channels, "ignore") ##removemos los canales que no sirven
 
