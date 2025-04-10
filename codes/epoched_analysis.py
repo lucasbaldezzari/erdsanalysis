@@ -27,13 +27,14 @@ annotations_list = []
 eeg_list = []
 eventos_list = []
 started_sesion_time = []
+bad_channels_list = [] ##lista de los canales que se eliminaron en cada run. Usaremos esto para fusionar los canales malos y eliminarlos antes de la concatenación
 
 for i in range(0,2):
 
     ##Datos del sujeto y la sesión
     n_sujeto = 1
     run = i+1#1 ##NÚMERO DE RUN 1 o 2
-    sesion = 1 #1 ejecutado, 2 imaginado
+    sesion = 2 #1 ejecutado, 2 imaginado
     rootpath = "datasets\\"
     sujeto = f"sujeto_{n_sujeto}\\"
     tarea = "ejec" if sesion == 1 else "imag" ##tarea ejecutada o imaginada
@@ -78,9 +79,9 @@ for i in range(0,2):
 
     ## Cargamos info para eliminar canales y componentes de ICA
     bad_channels = list(preproc_file.loc[index,"bad_channels"].split("-"))
-    bad_channels = ["FP1","FP2","AF7","AF8","T7","T8"]
+    bad_channels_list.append(bad_channels)
     ##descartamos canales en noisy_eeg_data
-    noisy_eeg_data.drop_channels(bad_channels)
+    # noisy_eeg_data.drop_channels(bad_channels)
 
     ###Aplicamos ICA a la señal
     eeg_data_reconstructed = noisy_eeg_data.copy()
@@ -89,7 +90,16 @@ for i in range(0,2):
     del noisy_eeg_data
 
 ## ************************ CONCATENANDO EEGse los dos runs ************************
+total_bad_channels = []
+for bads in bad_channels_list:
+    for ch in bads:
+        if ch not in total_bad_channels:
+            total_bad_channels.append(ch)
+print(f"Canales a eliminar: {total_bad_channels}")
+
 eeg_concatenados = mne.concatenate_raws(eeg_list)
+eeg_concatenados.drop_channels(total_bad_channels)
+
 eeg_cleaned = eeg_concatenados.copy().filter(l_freq=1.0, h_freq=40, fir_design='firwin', skip_by_annotation='edge')
 # eeg_cleaned.set_eeg_reference(ref_channels=['Cz'])
 
@@ -103,7 +113,7 @@ eeg_cleaned = eeg_concatenados.copy().filter(l_freq=1.0, h_freq=40, fir_design='
 tmin, tmax = -0.5, 2
 event_ids = dict(IZQUIERDA=1, DERECHA=2)
 epocas_concatenadas = mne.Epochs(eeg_cleaned, event_id=["IZQUIERDA", "DERECHA"],
-                                 tmin=tmin-0.5, tmax=tmax+0.5,
+                                 tmin=tmin-0.5, tmax=tmax+0.1,
                                  baseline=None, preload=True)
 
 raw_eventos = mne.events_from_annotations(eeg_cleaned, event_id=event_ids)
@@ -141,7 +151,7 @@ epocas_concatenadas["DERECHA"].plot_psd(show=True,picks=["C1","C3","C2","C4"],fm
 bands = {"Mu":(8,12), "Beta":(12,30)}
 epocas_concatenadas["DERECHA"].plot_psd_topomap(show=True,fmax=40,proj=True,tmin=0,tmax=1,bands=bands,cmap="RdBu_r",colorbar=False)
 
-epocas_concatenadas["DERECHA"].plot_image(picks=["C1","C2"], cmap="RdBu_r")
+epocas_concatenadas.plot_image(picks=["C1","C2"], cmap="RdBu_r")
 
 ##graficos de los canales
 # epocas_concatenadas.plot_sensors(kind="3d", ch_type="all")
