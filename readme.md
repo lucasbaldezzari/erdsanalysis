@@ -73,21 +73,17 @@ Se crean nuevamente las épocas para comparar antes y después de aplicar ICA.
 
 La señal reconstruida se visualiza nuevamente para validar que se hayan eliminado correctamente los artefactos.
 
-7. **Segunda ronda de eliminación de canales (Opcional)**
-
-Se revisa nuevamente la señal para evaluar si algún canal adicional debe ser descartado.
-
-8. **Eliminación de Trials (Opcional)**
+7. **Eliminación de Trials (Opcional)**
 
 Después de evaluar la señal reconstruida y las épocas individuales, podrían eliminarse trials específicos si se identifican claramente como ruido.
 
 De todos modos, se aconseja dejar este paso para cuando se realice el análisis de ERD/ERS en la señal.
 
-9. **Guardado del modelo ICA**
+8. **Guardado del modelo ICA**
 
 El modelo ICA entrenado se guarda en formato *.fif* para poder reutilizarlo en futuros análisis, asegurando consistencia en la metodología.
 
-10. **Guardado de información sobre canales y componentes descartados**
+9. **Guardado de información sobre canales y componentes descartados**
 
 Se genera un archivo .csv que registra detalladamente los canales descartados y componentes excluidos, asegurando transparencia y reproducibilidad del análisis.
 

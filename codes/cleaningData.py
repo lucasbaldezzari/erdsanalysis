@@ -32,7 +32,7 @@ ch_names = [ch for ch in ch_names if ch not in channels_to_remove]
 
 ##Datos del sujeto y la sesión
 n_sujeto = 1
-run = 1 ##NÚMERO DE RUN 1 o 2
+run = 2 ##NÚMERO DE RUN 1 o 2
 sesion = 2 #1 ejecutado, 2 imaginado
 rootpath = "datasets\\"
 sujeto = f"sujeto_{n_sujeto}\\"
@@ -73,7 +73,7 @@ plotEEG(noisy_eeg_data, scalings = 40,show=True, block=True,
         highpass=1, lowpass=40, title="Original filtrada en 1-40Hz para analisis de rechazo de canales")
 
 ##Luego de la inspección se decide eliminar los siguientes canales:
-bad_channels = ["T7","F9","F10","AF7","AF8"]
+bad_channels = ["AF7","AF8","FP1","FP2"]
 
 noisy_eeg_data.drop_channels(bad_channels, "ignore") ##removemos los canales que no sirven
 
@@ -96,10 +96,10 @@ en cada trial y compararlos entre sí.
 print(eventos_app["cueInitTime"].diff().mean())
 print(np.diff(events_time_ghiamp).mean())
 
-tmin, tmax = -1, 3
+tmin, tmax = -0.5, 2
 event_ids = dict(IZQUIERDA=1, DERECHA=2)
 epocas = mne.Epochs(eeg_data, event_id=["IZQUIERDA", "DERECHA"],
-                    tmin=tmin-0.5, tmax=tmax+0.5,
+                    tmin=tmin-0.5, tmax=tmax+0.1,
                     baseline=None, preload=True)
 
 
@@ -111,8 +111,6 @@ Repairing artifacts with ICA
 ##entrenamos el ICA para separar los componentes
 ica = getICA(eeg_data, n_components = 30, method="fastica")
 
-ica.plot_components()###ploteo para ver los componentes
-
 """
 5.1 ANALIZANDO LOS COMPONENTES
 Para analizar los componentes, podemos plotearlos para la señal completa o para las épocas.
@@ -123,18 +121,20 @@ La idea es graficar las fuentes completas y también las fuentes de las épocas.
 si un componente es un artefacto o un ritmo alfa (occipital) o mu (sensorimotor) u o otro ritmo de interés.
 """
 
+ica.plot_components()###ploteo para ver los componentes
+
 ica.plot_sources(eeg_data, title = "Fuentes completas")##ploteo para la señal completa
 ica.plot_sources(epocas, title="Epocas completas")##ploteo para las epocas
 ica.plot_sources(epocas["IZQUIERDA"], title = "Sólo épocas IZQUIERDA")##ploteo para las epocas izquierda
 ica.plot_sources(epocas["DERECHA"], title = "Sólo épocas DERECHA")##ploteo para las epocas derecha
 
 muscle_exclude = ica.find_bads_muscle(eeg_data)[0]
-eog_exclude = [0,5]
+eog_exclude = [0,1]
 ecg_exclude = []
 other_exclude = []
 dudosos_exclude = []
 
-alpha_occipital = []
+alpha_occipital = [7]
 erd_possible = []
 
 """
@@ -147,8 +147,11 @@ Esta fase nos sirve para evaluar en mayor profundidad aquellos componentes que s
 # ica.plot_properties(eeg_data, picks=muscle_exclude, psd_args={'fmax': 100.}, image_args={'sigma': 1.})
 ica.plot_properties(epocas, picks=muscle_exclude, psd_args={'fmax': 100.}, image_args={'sigma': 1.})
 
-remove_idx_muscle = []
+remove_idx_muscle = []##para remover los componentes que NO
 muscle_exclude = [compt for compt in muscle_exclude if compt not in remove_idx_muscle]
+
+##luego de una inspección adicional se deciden agregar algunos componentes a la lista de exclusión
+muscle_exclude += []
 
 to_exclude = muscle_exclude+eog_exclude+ecg_exclude#+alpha_occipital
 
@@ -168,7 +171,7 @@ eeg_data_reconstructed = ica.apply(eeg_data_reconstructed)
 
 ##genero las épocas de la señal reconstruida
 epocas_reconstructed = mne.Epochs(eeg_data_reconstructed, event_id=["IZQUIERDA", "DERECHA"],
-                    tmin=tmin-0.5, tmax=tmax+0.5,  
+                    tmin=tmin-0.5, tmax=tmax+0.1,  
                     baseline=None, preload=True)
 
 epocas_reconstructed = ica.apply(epocas_reconstructed)
@@ -215,11 +218,7 @@ epocas_reconstructed["IZQUIERDA"].plot(scalings = 40,show=True, block=True,
 #                                      event_id=event_ids,
 #                                      event_color=dict(IZQUIERDA="red", DERECHA="blue"))
 
-## ************************ 7. SEGUNDA RONDA DE ELIMINACIÓN DE CANALES ************************
-bad_channels_2 = []
-eeg_data_reconstructed.drop_channels(bad_channels_2, "ignore") ##removemos los canales que no sirven
-
-### *********************** 8. TRIALS A ELIMINAR ************************
+### *********************** 7. TRIALS A ELIMINAR ************************
 """
 La inspección en el punto 6 podría dar lugar a eliminar trials que no son de interés o que son ruido.
 """
@@ -239,7 +238,12 @@ import os
 if os.path.exists(root_path+df_file):
     df = pd.read_csv(root_path+df_file,index_col=0)
 else:
-    df = pd.DataFrame(columns=["sujeto","eeg_file","bad_channels","bad_muscle_components","bad_eog_components","alpha_components","trials_to_remove"])
+    df = pd.DataFrame(columns=["sujeto","eeg_file","bad_channels",
+                               "bad_muscle_components",
+                               "bad_eog_components",
+                               "alpha_components",
+                               "ecg_components",
+                               "trials_to_remove"])
 
 ##agregamos la info al dataframe
 index = f"Run{run}_TipoSesion{sesion}"
@@ -247,12 +251,16 @@ index = f"Run{run}_TipoSesion{sesion}"
 formatted_channels = '-'.join([f"{ch}" for ch in bad_channels + bad_channels_2])
 muscle_exclude_formatted = '-'.join([f"{compt}" for compt in muscle_exclude])
 eog_exclude_formatted = '-'.join([f"{compt}" for compt in eog_exclude])
-alpha_occipital_formatted = '-'.join([f"{compt}" for compt in alpha_occipital])
+alpha_occipital_formatted = '-'.join([f"{compt}" for compt in ecg_exclude])
+ecg_component_formatted = '-'.join([f"{compt}" for compt in alpha_occipital])
 formatted_muscle_components = '-'.join([f"{compt}" for compt in muscle_exclude])
 formatted_trials_to_remove = '-'.join([f"{trial}" for trial in trials_to_remove])
 
 df.loc[index] = [sujeto,eeg_file,formatted_channels,
-                 muscle_exclude_formatted,eog_exclude_formatted,alpha_occipital_formatted,
+                 muscle_exclude_formatted,
+                 eog_exclude_formatted,
+                 alpha_occipital_formatted,
+                 ecg_component_formatted,
                  formatted_trials_to_remove]
 ##guardamos el dataframe
 df.to_csv(root_path+df_file, index=True)
