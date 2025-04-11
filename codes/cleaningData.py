@@ -31,9 +31,9 @@ channels_to_remove = ["A1","A2"]
 ch_names = [ch for ch in ch_names if ch not in channels_to_remove]
 
 ##Datos del sujeto y la sesión
-n_sujeto = 1
-run = 2 ##NÚMERO DE RUN 1 o 2
-sesion = 2 #1 ejecutado, 2 imaginado
+n_sujeto = 2
+run = 1 ##NÚMERO DE RUN 1 o 2
+sesion = 1 #1 ejecutado, 2 imaginado
 rootpath = "datasets\\"
 sujeto = f"sujeto_{n_sujeto}\\"
 tarea = "ejec" if sesion == 1 else "imag" ##tarea ejecutada o imaginada
@@ -73,7 +73,7 @@ plotEEG(noisy_eeg_data, scalings = 40,show=True, block=True,
         highpass=1, lowpass=40, title="Original filtrada en 1-40Hz para analisis de rechazo de canales")
 
 ##Luego de la inspección se decide eliminar los siguientes canales:
-bad_channels = ["AF7","AF8","FP1","FP2"]
+bad_channels = []
 
 noisy_eeg_data.drop_channels(bad_channels, "ignore") ##removemos los canales que no sirven
 
@@ -129,10 +129,10 @@ ica.plot_sources(epocas["IZQUIERDA"], title = "Sólo épocas IZQUIERDA")##ploteo
 ica.plot_sources(epocas["DERECHA"], title = "Sólo épocas DERECHA")##ploteo para las epocas derecha
 
 muscle_exclude = ica.find_bads_muscle(eeg_data)[0]
-eog_exclude = [0,1]
+eog_exclude = [0,14,17,19]
 ecg_exclude = []
 other_exclude = []
-dudosos_exclude = []
+dudosos_exclude = [24]
 
 alpha_occipital = [7]
 erd_possible = []
@@ -222,9 +222,9 @@ epocas_reconstructed["IZQUIERDA"].plot(scalings = 40,show=True, block=True,
 """
 La inspección en el punto 6 podría dar lugar a eliminar trials que no son de interés o que son ruido.
 """
-trials_to_remove = []
+trials_to_remove = [12,11,16]
 
-epocas_reconstructed.drop(trials_to_remove, reason="Ruido") ##eliminamos los trials que no sirven
+# epocas_reconstructed.drop(trials_to_remove, reason="Ruido") ##eliminamos los trials que no sirven
 
 ### *********************** 9. GUARDANDO EL MODELO ICA ************************
 ##guardamos el modelo ICA
@@ -248,7 +248,7 @@ else:
 ##agregamos la info al dataframe
 index = f"Run{run}_TipoSesion{sesion}"
 
-formatted_channels = '-'.join([f"{ch}" for ch in bad_channels + bad_channels_2])
+formatted_channels = '-'.join([f"{ch}" for ch in bad_channels])
 muscle_exclude_formatted = '-'.join([f"{compt}" for compt in muscle_exclude])
 eog_exclude_formatted = '-'.join([f"{compt}" for compt in eog_exclude])
 alpha_occipital_formatted = '-'.join([f"{compt}" for compt in ecg_exclude])
