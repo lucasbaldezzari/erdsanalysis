@@ -33,7 +33,7 @@ ch_names = [ch for ch in ch_names if ch not in channels_to_remove]
 ##Datos del sujeto y la sesión
 n_sujeto = 2
 run = 1 ##NÚMERO DE RUN 1 o 2
-sesion = 1 #1 ejecutado, 2 imaginado
+sesion = 2 #1 ejecutado, 2 imaginado
 rootpath = "datasets\\"
 sujeto = f"sujeto_{n_sujeto}\\"
 tarea = "ejec" if sesion == 1 else "imag" ##tarea ejecutada o imaginada
@@ -127,14 +127,14 @@ ica.plot_sources(eeg_data, title = "Fuentes completas")##ploteo para la señal c
 ica.plot_sources(epocas, title="Epocas completas")##ploteo para las epocas
 ica.plot_sources(epocas["IZQUIERDA"], title = "Sólo épocas IZQUIERDA")##ploteo para las epocas izquierda
 ica.plot_sources(epocas["DERECHA"], title = "Sólo épocas DERECHA")##ploteo para las epocas derecha
-
+ica.plot_sources(eeg_data, picks=[17,18,23,28])
 muscle_exclude = ica.find_bads_muscle(eeg_data)[0]
-eog_exclude = [0,14,17,19]
+eog_exclude = [0,2]
 ecg_exclude = []
-other_exclude = []
-dudosos_exclude = [24]
+other_exclude = [1,11,17,18,23,25,19,20,27]
+dudosos_exclude = []
 
-alpha_occipital = [7]
+alpha_occipital = [9,28,13]
 erd_possible = []
 
 """
@@ -153,7 +153,7 @@ muscle_exclude = [compt for compt in muscle_exclude if compt not in remove_idx_m
 ##luego de una inspección adicional se deciden agregar algunos componentes a la lista de exclusión
 muscle_exclude += []
 
-to_exclude = muscle_exclude+eog_exclude+ecg_exclude#+alpha_occipital
+to_exclude = muscle_exclude+eog_exclude+ecg_exclude+alpha_occipital
 
 ##usamos overlay para ver que tanto se modifica la señal al eliminar los componentes
 ica.plot_overlay(eeg_data, exclude=to_exclude) 
@@ -251,8 +251,8 @@ index = f"Run{run}_TipoSesion{sesion}"
 formatted_channels = '-'.join([f"{ch}" for ch in bad_channels])
 muscle_exclude_formatted = '-'.join([f"{compt}" for compt in muscle_exclude])
 eog_exclude_formatted = '-'.join([f"{compt}" for compt in eog_exclude])
-alpha_occipital_formatted = '-'.join([f"{compt}" for compt in ecg_exclude])
-ecg_component_formatted = '-'.join([f"{compt}" for compt in alpha_occipital])
+alpha_occipital_formatted = '-'.join([f"{compt}" for compt in alpha_occipital])
+ecg_component_formatted = '-'.join([f"{compt}" for compt in ecg_exclude])
 formatted_muscle_components = '-'.join([f"{compt}" for compt in muscle_exclude])
 formatted_trials_to_remove = '-'.join([f"{trial}" for trial in trials_to_remove])
 
