@@ -1,0 +1,16 @@
+SJ3- Fue sin dormir 
+
+Sesion1:
+R1- Capaz se podrían descartas canales FPZ y FP1
+ruido: 2,8,9,11,16,21,23,24,28,29 (ICA)
+
+R2- Creo que elimine muchos componentes pero todo parecía ruido. El registro post procesamiento se ve muy atenuado, no veo posibles patrones. La componente 17 parece ser EMG pero como tiene contribuciones de la zona de interés no la excluí.
+ruido: 3,6,11,12,13,19,24,26,28,29 (ICA)
+
+Sesion2:
+R1-Impedancia de canal FP1 empeora durante el registro, descartado.
+ICA 9- componente cerebral
+ruido: 2,3,4,5,7,11,13,14,17,21,22 (ICA) (de la 2 a la 7 son líneas rectas sin ninguna contribución en la ventana de interés)
+
+R2-Impedancia de canales FP1 y P7 empeora durante el registro, descartado. ¿Descartar F10?
+ruido: 8,15,16,18,22
