@@ -253,7 +253,6 @@ muscle_exclude_formatted = '-'.join([f"{compt}" for compt in muscle_exclude])
 eog_exclude_formatted = '-'.join([f"{compt}" for compt in eog_exclude])
 alpha_occipital_formatted = '-'.join([f"{compt}" for compt in alpha_occipital])
 ecg_component_formatted = '-'.join([f"{compt}" for compt in ecg_exclude])
-formatted_muscle_components = '-'.join([f"{compt}" for compt in muscle_exclude])
 formatted_trials_to_remove = '-'.join([f"{trial}" for trial in trials_to_remove])
 
 df.loc[index] = [sujeto,eeg_file,formatted_channels,

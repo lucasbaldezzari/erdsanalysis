@@ -89,9 +89,9 @@ Se genera un archivo .csv que registra detalladamente los canales descartados y 
 
 #### Consideraciones finales
 
-Este pipeline garantiza una limpieza minuciosa y reproducible de los datos EEG, facilitando análisis posteriores tales como clasificación de tareas motoras (movimientos ejecutados vs. imaginados), análisis de patrones espaciales y temporales, o generación de interfaces cerebro-computadora (BCI).
+Con este pipeline buscamos limpiar los datos EEG al tiempo que buscamos hacer reproducible la metodología, buscando facilitar el análisis posterior, tal como clasificación de tareas motoras (movimientos ejecutados vs. imaginados), análisis de patrones espaciales y temporales, o generación de interfaces cerebro-computadora (BCI).
 
-Para ejecutar correctamente este script asegúrate de tener todos los archivos de datos en las rutas indicadas y contar con el entorno Python configurado adecuadamente, especialmente con la librería MNE-Python.
+Para ejecutar correctamente este script es importante tener todos los archivos de datos en las rutas indicadas y contar con el entorno Python configurado adecuadamente, especialmente con la librería MNE-Python.
 
 #### Referencias
 
