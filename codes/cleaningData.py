@@ -31,9 +31,9 @@ channels_to_remove = ["A1","A2"]
 ch_names = [ch for ch in ch_names if ch not in channels_to_remove]
 
 ##Datos del sujeto y la sesión
-n_sujeto = 3
-run = 1 ##NÚMERO DE RUN 1 o 2
-sesion = 1 #1 ejecutado, 2 imaginado
+n_sujeto = 8
+run = 2 ##NÚMERO DE RUN 1 o 2
+sesion = 2 #1 ejecutado, 2 imaginado
 rootpath = "datasets\\"
 sujeto = f"sujeto_{n_sujeto}\\"
 tarea = "ejec" if sesion == 1 else "imag" ##tarea ejecutada o imaginada
@@ -70,10 +70,10 @@ se plotea la señal completa para ver qué canales se pueden eliminar.
 ##ploteamos la señal completa para ver si hay canales ruidosos debido a una mala impedancia
 plotEEG(noisy_eeg_data, scalings = 40,show=True, block=True,
         duration = 20, start = 0, remove_dc = True, bad_color = "red",
-        highpas=1, lowpass=40, title="Original filtrada en 1-40Hz para analisis de rechazo de canales")
+        highpass=1, lowpass=40, title="Original filtrada en 1-40Hz para analisis de rechazo de canales")
 
 ##Luego de la inspección se decide eliminar los siguientes canales:
-bad_channels = []
+bad_channels = ["F10"]
 
 noisy_eeg_data.drop_channels(bad_channels, "ignore") ##removemos los canales que no sirven
 
@@ -128,8 +128,8 @@ ica.plot_sources(epocas, title="Epocas completas")##ploteo para las epocas
 ica.plot_sources(epocas["IZQUIERDA"], title = "Sólo épocas IZQUIERDA")##ploteo para las epocas izquierda
 ica.plot_sources(epocas["DERECHA"], title = "Sólo épocas DERECHA")##ploteo para las epocas derecha
 ica.plot_sources(eeg_data, picks=[17,18,23,28])
-muscle_exclude = ica.find_bads_muscle(eeg_data)[0]
-eog_exclude = [1]
+muscle_exclude = [1,3,5,6,8,21,22,23,24,26] #ica.find_bads_muscle(eeg_data)[0]
+eog_exclude = [0,2]
 ecg_exclude = []
 other_exclude = [1,11,17,18,23,25,19,20,27]
 dudosos_exclude = []
