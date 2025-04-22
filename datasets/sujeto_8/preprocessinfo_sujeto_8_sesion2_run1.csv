@@ -1,2 +1,2 @@
 ,sujeto,eeg_file,bad_channels,bad_muscle_components,bad_eog_components,alpha_components,ecg_components,trials_to_remove
-Run1_TipoSesion2,sujeto_3\,sujeto3_imag_1.hdf5,,1-7-9-13-15-21-22-24-26-29,0-2-28,9-28-13,,
+Run1_TipoSesion2,sujeto_8\,sujeto8_imag_1.hdf5,AF3-F8,4-6-19-24-26-29-18-22-27-10,0-1-2-3,,,

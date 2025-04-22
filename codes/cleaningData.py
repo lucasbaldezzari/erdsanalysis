@@ -31,8 +31,8 @@ channels_to_remove = ["A1","A2"]
 ch_names = [ch for ch in ch_names if ch not in channels_to_remove]
 
 ##Datos del sujeto y la sesión
-n_sujeto = 2
-run = 1 ##NÚMERO DE RUN 1 o 2
+n_sujeto = 8
+run = 2 ##NÚMERO DE RUN 1 o 2
 sesion = 2 #1 ejecutado, 2 imaginado
 rootpath = "datasets\\"
 sujeto = f"sujeto_{n_sujeto}\\"
@@ -73,7 +73,7 @@ plotEEG(noisy_eeg_data, scalings = 40,show=True, block=True,
         highpass=1, lowpass=40, title="Original filtrada en 1-40Hz para analisis de rechazo de canales")
 
 ##Luego de la inspección se decide eliminar los siguientes canales:
-bad_channels = []
+bad_channels = ["F10"]
 
 noisy_eeg_data.drop_channels(bad_channels, "ignore") ##removemos los canales que no sirven
 
@@ -123,18 +123,18 @@ si un componente es un artefacto o un ritmo alfa (occipital) o mu (sensorimotor)
 
 ica.plot_components()###ploteo para ver los componentes
 
-ica.plot_sources(eeg_data, title = "Fuentes completas")##ploteo para la señal completa
+ica.plot_sources(eeg_data, title = "Fuentes completas", picks=None)##ploteo para la señal completa
 ica.plot_sources(epocas, title="Epocas completas")##ploteo para las epocas
 ica.plot_sources(epocas["IZQUIERDA"], title = "Sólo épocas IZQUIERDA")##ploteo para las epocas izquierda
 ica.plot_sources(epocas["DERECHA"], title = "Sólo épocas DERECHA")##ploteo para las epocas derecha
 ica.plot_sources(eeg_data, picks=[17,18,23,28])
-muscle_exclude = ica.find_bads_muscle(eeg_data)[0]
+muscle_exclude = [1,3,5,6,8,21,22,23,24,26] #ica.find_bads_muscle(eeg_data)[0]
 eog_exclude = [0,2]
 ecg_exclude = []
 other_exclude = [1,11,17,18,23,25,19,20,27]
 dudosos_exclude = []
 
-alpha_occipital = [9,28,13]
+alpha_occipital = []
 erd_possible = []
 
 """
@@ -222,7 +222,7 @@ epocas_reconstructed["IZQUIERDA"].plot(scalings = 40,show=True, block=True,
 """
 La inspección en el punto 6 podría dar lugar a eliminar trials que no son de interés o que son ruido.
 """
-trials_to_remove = [12,11,16]
+trials_to_remove = []
 
 # epocas_reconstructed.drop(trials_to_remove, reason="Ruido") ##eliminamos los trials que no sirven
 
@@ -253,7 +253,6 @@ muscle_exclude_formatted = '-'.join([f"{compt}" for compt in muscle_exclude])
 eog_exclude_formatted = '-'.join([f"{compt}" for compt in eog_exclude])
 alpha_occipital_formatted = '-'.join([f"{compt}" for compt in alpha_occipital])
 ecg_component_formatted = '-'.join([f"{compt}" for compt in ecg_exclude])
-formatted_muscle_components = '-'.join([f"{compt}" for compt in muscle_exclude])
 formatted_trials_to_remove = '-'.join([f"{trial}" for trial in trials_to_remove])
 
 df.loc[index] = [sujeto,eeg_file,formatted_channels,
