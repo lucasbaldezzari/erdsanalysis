@@ -42,14 +42,11 @@ bad_channels_list = [] ##lista de los canales que se eliminaron en cada run. Usa
 
 ## CARAGMOS Y FILTRAMOS LOS DATOS DEL O LA SUJETO A ESTUDIAR
 ##Datos del sujeto y la sesión
-n_sujeto = 4
+n_sujeto = 1
 sesion = 1 #1 ejecutado, 2 imaginado
 rootpath = "datasets\\"
 sujeto = f"sujeto_{n_sujeto}\\"
 tarea = "ejec" if sesion == 1 else "imag" ##tarea ejecutada o imaginada
-
-plot_tfr = True
-
 for i in range(0,2):
     run = i+1#1 ##NÚMERO DE RUN 1 o 2
     eeg_file = f"sujeto{n_sujeto}_{tarea}_{run}.hdf5"
@@ -87,6 +84,10 @@ for i in range(0,2):
     ##cargamos el archivo ICA
     ica = read_ica(ica_file)
     ica.exclude = [int(comp) for comp in ica.exclude] ##ICA ya tiene almanecados los componentes a eliminar
+
+    ## Cargamos info para eliminar canales y componentes de ICA
+    bad_channels = list(preproc_file.loc[index,"bad_channels"].split("-"))
+    bad_channels_list.append(bad_channels)
     ##descartamos canales en noisy_eeg_data
     # noisy_eeg_data.drop_channels(bad_channels)
 
@@ -99,27 +100,27 @@ for i in range(0,2):
 ## 2. ************************ CONCATENANDO DATOS ************************
 ## Una vez que hemos cargado y filtrado los datos con ICA, estamos en condiciones de concatenar como si fuera un solo registro
 
-# ## Evaluamos los canales a eliminar para este sujeto en base a nuestro análisis previo (ver procedimiento en cleaningData.py)
-# total_bad_channels = []
-# for bads in bad_channels_list:
-#     for ch in bads:
-#         if ch not in total_bad_channels:
-#             total_bad_channels.append(ch)
-# print(f"Canales a eliminar: {total_bad_channels}")
+## Evaluamos los canales a eliminar para este sujeto en base a nuestro análisis previo (ver procedimiento en cleaningData.py)
+total_bad_channels = []
+for bads in bad_channels_list:
+    for ch in bads:
+        if ch not in total_bad_channels:
+            total_bad_channels.append(ch)
+print(f"Canales a eliminar: {total_bad_channels}")
 
 eeg_concatenados = mne.concatenate_raws(eeg_list)
 eeg_concatenados.drop_channels(total_bad_channels)
 
-eeg_cleaned = eeg_concatenados.copy()#.filter(l_freq=1., h_freq=30., fir_design='firwin', skip_by_annotation='edge')
+eeg_cleaned = eeg_concatenados.copy().filter(l_freq=1.0, h_freq=40, fir_design='firwin', skip_by_annotation='edge')
 
 ## 3. ************************ SEPARANDO EN ÉPOCAS ************************
 
 ##epOching de eeg_concatenados
-tmin, tmax = -2, 1.5
+tmin, tmax = -0.5, 1.5
 event_ids = dict(IZQUIERDA=1, DERECHA=2)
 epocas_concatenadas = mne.Epochs(eeg_cleaned, event_id=["IZQUIERDA", "DERECHA"],
                                  tmin=tmin-0.1, tmax=tmax+0.1,
-                                 baseline=None, preload=True).drop_channels(["Oz","O1","O2","AF4","AF8"])
+                                 baseline=None, preload=True)
 
 raw_eventos = mne.events_from_annotations(eeg_cleaned, event_id=event_ids)
 eventos=mne.pick_events(raw_eventos[0], include=[1,2])
@@ -129,25 +130,17 @@ epocas_concatenadas.plot(scalings = 40,show=True, block=True,
                           event_id=event_ids,
                           event_color=dict(IZQUIERDA="red", DERECHA="blue"))
 
-# epocas_concatenadas["IZQUIERDA"].average().plot_topo()
-spectrum=epocas_concatenadas["DERECHA"].compute_psd()
+selected_channels = ["C3","C1","Cz","C2","C4"]
 
-bands = {"12 Hz": 12, "15 Hz": 15, "28 Hz": 28, "8-12 Hz": (8, 12)}
-spectrum.plot_topomap(bands=bands, vlim="joint")
-
-# selected_channels = ["C3","C1","Cz","C2","C4"]
-
-# epocas_to_analyze = epocas_concatenadas.copy().pick(selected_channels)
-# epocas_to_analyze.plot(scalings = 40,show=True, block=True,
-#                           events=eventos,
-#                           event_id=event_ids,
-#                           event_color=dict(IZQUIERDA="red", DERECHA="blue"))
+epocas_to_analyze = epocas_concatenadas.pick(selected_channels)
 
 ## 4. ************************ VARIABLES ÚTILES PARA OBTENER Y ANALIZAR LOS ERDS ************************ 
 
-freqs = np.arange(6, 30)  #rango de frecuencias a estudiar
-vmin, vmax = -0.5, 0.5  # seteamos los valores min y max para el gráfico de ERDS
+freqs = np.arange(5, 30)  #rango de frecuencias a estudiar
+vmin, vmax = -1, 1.5  # seteamos los valores min y max para el gráfico de ERDS
+baseline = (-0.5, -0.1)  # intervalo de la línea de base (en segundos)
 cnorm = TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)  # min, centro max de los ERDS
+
 kwargs = dict(n_permutations=100, step_down_p=0.05, seed=1, buffer_size=None, out_type="mask")
 
 ## 5. ************************ COMPUTAMOS LA TIME-FREQUENCY REPRESENTATION (TFR) ************************ 
@@ -159,92 +152,52 @@ tfr = epocas_concatenadas.compute_tfr(
     use_fft=True,
     return_itc=False,
     average=False,
-    decim=2)
+    decim=2,
+    picks=selected_channels)
 
-baseline = (-1.5, -0.55)  # intervalo de la línea de base (en segundos)
-tfr.apply_baseline(baseline, mode="percent")
-tfr.crop(-0.6, 1.1)
+tfr.crop(-0.5, 2).apply_baseline(baseline, mode="percent")
 
-tfr["IZQUIERDA"][15].plot_topo()
+tfr[2].plot_topo()
 
-# selected_channels = ["C1","Cz","C2"]
-# index_selected_chs = [tfr.ch_names.index(name) for name in selected_channels]
+selected_channels = ["C1","Cz","C2"]
+index_selected_chs = [epocas_concatenadas.ch_names.index(name) for name in selected_channels]
 
-## 6. ***************** GRAFICAMOS EL ESPECTRO TIEMPO-FRECUENCIA PARA LOS CANALES DE INTERES ***************** 
+for event in event_ids:
+    # select desired epochs for visualization
+    tfr_ev = tfr[event]
+    fig, axes = plt.subplots(
+        1, 4, figsize=(12, 4), gridspec_kw={"width_ratios": [10, 10, 10, 1]}
+    )
+    for ch, ax in enumerate(axes[:-1]):  # for each channel
+        # positive clusters
+        _, c1, p1, _ = pcluster_test(tfr_ev.data[:, index_selected_chs[ch]], tail=1, **kwargs)
+        # negative clusters
+        _, c2, p2, _ = pcluster_test(tfr_ev.data[:, index_selected_chs[ch]], tail=-1, **kwargs)
 
-if plot_tfr:
-    for event in event_ids:
-        # select desired epochs for visualization
-        tfr_ev = tfr[event]
-        fig, axes = plt.subplots(
-            1, 4, figsize=(12, 4), gridspec_kw={"width_ratios": [10, 10, 10, 1]}
+        # note that we keep clusters with p <= 0.05 from the combined clusters
+        # of two independent tests; in this example, we do not correct for
+        # these two comparisons
+        c = np.stack(c1 + c2, axis=2)  # combined clusters
+        p = np.concatenate((p1, p2))  # combined p-values
+        mask = c[..., p <= 0.05].any(axis=-1)
+
+        # plot TFR (ERDS map with masking)
+        tfr_ev.average().plot(
+            [index_selected_chs[ch]],
+            cmap="RdBu",
+            cnorm=cnorm,
+            axes=ax,
+            colorbar=False,
+            show=False,
+            mask=mask,
+            mask_style="mask",
         )
-        for ch, ax in enumerate(axes[:-1]):  # for each channel
-            # positive clusters
-            _, c1, p1, _ = pcluster_test(tfr_ev.data[:, ch], tail=1, **kwargs)
-            # negative clusters
-            _, c2, p2, _ = pcluster_test(tfr_ev.data[:, ch], tail=-1, **kwargs)
 
-            # note that we keep clusters with p <= 0.05 from the combined clusters
-            # of two independent tests; in this example, we do not correct for
-            # these two comparisons
-            c = np.stack(c1 + c2, axis=2)  # combined clusters
-            p = np.concatenate((p1, p2))  # combined p-values
-            mask = c[..., p <= 0.05].any(axis=-1)
-
-            # plot TFR (ERDS map with masking)
-            tfr_ev.average().plot(
-                [ch],
-                cmap="RdBu",
-                cnorm=cnorm,
-                axes=ax,
-                colorbar=False,
-                show=False,
-                mask=mask,
-                mask_style="mask",
-            )
-
-            ax.set_title(ch, fontsize=10)
-            ax.axvline(0, linewidth=1, color="black", linestyle=":")  # event
-            if ch!= 0:
-                ax.set_ylabel("")
-                ax.set_yticklabels("")
-        fig.colorbar(axes[0].images[-1], cax=axes[-1]).ax.set_yscale("linear")
-        fig.suptitle(f"ERDS ({event})")
-        plt.show()
-
-## 7. ***************** GRAFICAMOS LAS CURVAS ERDS PARA LOS CANALES DE INTERÉS ***************** 
-df_data=tfr.to_data_frame(time_format=None)
-df_data.head() #Los tiempos de la columna time están en segundos
-
-df = tfr.to_data_frame(time_format=None, long_format=True)
-
-# Map to frequency bands:
-freq_bounds = {"_": 0, "delta": 3, "theta": 7, "alpha": 12, "beta": 35, "gamma": 140}
-df["band"] = pd.cut(
-    df["freq"], list(freq_bounds.values()), labels=list(freq_bounds)[1:]
-)
-
-# Filter to retain only relevant frequency bands:
-freq_bands_of_interest = ["alpha", "beta"]
-df = df[df.band.isin(freq_bands_of_interest)]
-df["band"] = df["band"].cat.remove_unused_categories()
-
-# Order channels for plotting:
-##filtro los canales
-# df = df[df["channel"].isin(("C3", "Cz", "C4"))]
-# df["channel"] = df["channel"].cat.remove_unused_categories()
-df["channel"] = df["channel"].cat.reorder_categories(("C3", "Cz", "C4"), ordered=False)
-
-g = sns.FacetGrid(df, row="band", col="channel", margin_titles=True)
-g.map(sns.lineplot, "time", "value", "condition", n_boot=10)
-axline_kw = dict(color="black", linestyle="dashed", linewidth=0.5, alpha=0.5)
-g.map(plt.axhline, y=0, **axline_kw)
-g.map(plt.axvline, x=0, **axline_kw)
-g.set(ylim=(None, 1.5))
-g.set_axis_labels("Time (s)", "ERDS")
-g.set_titles(col_template="{col_name}", row_template="{row_name}")
-g.add_legend(ncol=2, loc="lower center")
-g.fig.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.08)
-
-plt.show()
+        ax.set_title(index_selected_chs[ch], fontsize=10)
+        ax.axvline(0, linewidth=1, color="black", linestyle=":")  # event
+        if index_selected_chs[ch] != 0:
+            ax.set_ylabel("")
+            ax.set_yticklabels("")
+    fig.colorbar(axes[0].images[-1], cax=axes[-1]).ax.set_yscale("linear")
+    fig.suptitle(f"ERDS ({event})")
+    plt.show()
