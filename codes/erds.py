@@ -110,7 +110,15 @@ for i in range(0,2):
 eeg_concatenados = mne.concatenate_raws(eeg_list)
 # eeg_concatenados.drop_channels(total_bad_channels)
 
-eeg_cleaned = eeg_concatenados.copy().filter(l_freq=8., h_freq=12., fir_design='firwin', skip_by_annotation='edge')
+freqs = [50, 100, 150]  # Frecuencias a filtrar (Hz)
+eeg_cleaned = eeg_concatenados.copy().notch_filter(freqs=freqs, picks='eeg', method='spectrum_fit', filter_length='auto', phase='zero')
+
+eeg_cleaned.filter(l_freq=8, h_freq=28, 
+           picks='eeg', 
+           method='fir', 
+           phase='zero-double', 
+           fir_window='hamming',
+           filter_length='auto')
 
 ## 3. ************************ SEPARANDO EN ÉPOCAS ************************
 
@@ -133,7 +141,7 @@ epocas_concatenadas.plot(scalings = 40,show=True, block=True,
 spectrum=epocas_concatenadas["DERECHA"].compute_psd()
 
 bands = {"12 Hz": 12, "15 Hz": 15, "28 Hz": 28, "8-12 Hz": (8, 12)}
-# spectrum.plot_topomap(bands=bands, vlim="joint")
+spectrum.plot_topomap(bands=bands, vlim="joint")
 
 # selected_channels = ["C3","C1","Cz","C2","C4"]
 
@@ -145,7 +153,7 @@ bands = {"12 Hz": 12, "15 Hz": 15, "28 Hz": 28, "8-12 Hz": (8, 12)}
 
 ## 4. ************************ VARIABLES ÚTILES PARA OBTENER Y ANALIZAR LOS ERDS ************************ 
 
-freqs = np.arange(1, 40)  #rango de frecuencias a estudiar
+freqs = np.arange(8, 28)  #rango de frecuencias a estudiar
 vmin, vmax = -1, 1.5 # seteamos los valores min y max para el gráfico de ERDS
 cnorm = TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)  # min, centro max de los ERDS
 kwargs = dict(n_permutations=100, step_down_p=0.05, seed=1, buffer_size=None, out_type="mask")
@@ -155,7 +163,7 @@ kwargs = dict(n_permutations=100, step_down_p=0.05, seed=1, buffer_size=None, ou
 tfr = epocas_concatenadas.compute_tfr(
     method="multitaper",
     freqs=freqs,
-    n_cycles=freqs,
+    n_cycles=freqs/2,
     use_fft=True,
     return_itc=False,
     average=False,
