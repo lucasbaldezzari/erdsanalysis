@@ -6,6 +6,7 @@ import numpy as np
 import h5py
 from neuroiatools.EEGManager.RawArray import makeRawData
 from mne.preprocessing import read_ica
+import scipy.signal as signal
 
 def xml_to_sfp(xml_path, sfp_path):
     # Leer y parsear el archivo XML
@@ -87,7 +88,7 @@ def applyLaplaciano(raw, center_channel, neighbor_channels, new_channel_name=Non
     return raw_laplacian
 
 def concatenateEEGs(n_sujeto, sesion, rootpath = "datasets\\",
-                    sfreq=512, channels_to_remove = ["A1","A2"]):
+                    sfreq=512, channels_to_remove = ["A1","A2"], apply_ica=True):
 
     ##cargamos los nombres de los electrodos del g.HIAMP
     montage_df = pd.read_csv("codes\\ghiamp_montage.sfp",sep="\t",header=None)
@@ -120,28 +121,98 @@ def concatenateEEGs(n_sujeto, sesion, rootpath = "datasets\\",
         ###Creación de un Montage para el posicionamiento de los electrodos
         montage = mne.channels.read_custom_montage("codes\\ghiamp_montage.sfp")
 
-        noisy_eeg_data = makeRawData(raweeg, sfreq, channel_names=ch_names, montage=montage,
+        eeg_data = makeRawData(raweeg, sfreq, channel_names=ch_names, montage=montage,
                             event_times=events_time_ghiamp, event_labels=clases)
 
         ##corto la señal en events_time_ghiamp[0] -3 segundos
-        noisy_eeg_data.crop(events_time_ghiamp[0]-3)
+        eeg_data.crop(events_time_ghiamp[0]-3)
 
         ## ************************ CARGAMOS ICA ENTRENADO Y EL ARCHIVO CSV CON INFORMACIÓN DE PREPROCESAMIENTO ************************
         root_path = f"datasets\\{sujeto}"
         preproc_file = f"preprocessinfo_sujeto_{n_sujeto}_sesion{sesion}_run{run}.csv"
         preproc_file = pd.read_csv(root_path+preproc_file, index_col=0)
 
-        ica_file = f"datasets\\{sujeto}ICA_{eeg_file.split(".")[0]}.fif"
-        ##cargamos el archivo ICA
-        ica = read_ica(ica_file)
-        ica.exclude = [int(comp) for comp in ica.exclude] ##ICA ya tiene almanecados los componentes a eliminar
-        ##descartamos canales en noisy_eeg_data
-        # noisy_eeg_data.drop_channels(bad_channels)
+        if apply_ica:
 
-        ###Aplicamos ICA a la señal
-        eeg_data_reconstructed = noisy_eeg_data.copy()
-        eeg_data_reconstructed = ica.apply(eeg_data_reconstructed)
-        eeg_list.append(eeg_data_reconstructed)
-        del noisy_eeg_data
+            ica_file = f"datasets\\{sujeto}ICA_{eeg_file.split(".")[0]}.fif"
+            ##cargamos el archivo ICA
+            ica = read_ica(ica_file)
+            ica.exclude = [int(comp) for comp in ica.exclude] ##ICA ya tiene almanecados los componentes a eliminar
+            ##descartamos canales en eeg_data
+            # eeg_data.drop_channels(bad_channels)
+
+            ###Aplicamos ICA a la señal
+            
+            eeg_data = ica.apply(eeg_data)
+           
+        eeg_list.append(eeg_data)
+        del eeg_data
 
     return mne.concatenate_raws(eeg_list)
+
+
+def compute_stft_power(eeg_signal, sfreq, nperseg=256, noverlap=128):
+    """
+    Computa la STFT de la señal EEG y devuelve la potencia tiempo-frecuencia.
+    Parameters
+    ----------
+    eeg_signal : array_like
+        Señal EEG de entrada.
+    sfreq : float
+        Frecuencia de muestreo de la señal EEG.
+    nperseg : int, optional
+        Número de puntos por segmento para la STFT (default es 256).
+    noverlap : int, optional
+        Número de puntos de solapamiento entre segmentos (default es 128).
+    Returns
+    -------
+    f : array_like
+        Frecuencias de la STFT.
+    """
+    f, t, Zxx = signal.stft(eeg_signal, fs=sfreq, nperseg=nperseg, noverlap=noverlap)
+    power = np.abs(Zxx) ** 2  # Power = |STFT|^2 se calcula la potencia elevando al cuadrado el módulo de la STFT
+    return f, t, power
+
+def compute_band_power(power, freqs, band):
+    """
+    Sum the power in a specific frequency band.
+    Suma la potencia en una banda de frecuencia específica.
+    Parameters
+    ----------
+    power : array_like
+        Potencia de la STFT (frecuencia x tiempo).
+    freqs : array_like
+        Frecuencias de la STFT.
+    band : tuple
+        Banda de frecuencia (min, max) para la cual se desea calcular la potencia.
+    Returns
+    -------
+    band_power : array_like
+        Potencia total en la banda de frecuencia especificada.
+    """
+    band_indices = np.where((freqs >= band[0]) & (freqs <= band[1]))[0] ##filtramos los índices en la banda de interés
+    band_power = np.sum(power[band_indices, :], axis=0) ##sumamos la potencia en la banda de interés a lo largo del tiempo
+    return band_power
+
+def compute_erd_ers_stft(band_power, baseline_indices, task_indices):
+    """
+    Compute ERD/ERS (%) based on STFT band power.
+    Calcula ERD/ERS (%) basado en la potencia de banda STFT.
+    Parameters
+    ----------
+    band_power : array_like
+        Potencia de banda STFT (frecuencia x tiempo).
+    baseline_indices : array_like
+        Índices de la señal de referencia (línea base).
+    task_indices : array_like
+        Índices de la señal de tarea (ejecución).
+    Returns
+    -------
+    erd_ers_percent : float
+        Porcentaje de ERD/ERS.
+    """
+    baseline_power = np.mean(band_power[baseline_indices])
+    task_power = np.mean(band_power[task_indices])
+    erd_ers_percent = ((task_power - baseline_power) / baseline_power) * 100
+    return erd_ers_percent
+
