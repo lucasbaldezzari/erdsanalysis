@@ -87,11 +87,11 @@ def applyLaplaciano(raw, center_channel, neighbor_channels, new_channel_name=Non
 
     return raw_laplacian
 
-def concatenateEEGs(n_sujeto, sesion, rootpath = "datasets\\",
+def concatenateEEGs(n_sujeto, sesion, rootpath = "datasets\\",montage_file = "codes\\ghiamp_montage.sfp",
                     sfreq=512, channels_to_remove = ["A1","A2"], apply_ica=True):
 
     ##cargamos los nombres de los electrodos del g.HIAMP
-    montage_df = pd.read_csv("codes\\ghiamp_montage.sfp",sep="\t",header=None)
+    montage_df = pd.read_csv(montage_file,sep="\t",header=None)
     ch_names = list(montage_df[0])
     
     ch_names = [ch for ch in ch_names if ch not in channels_to_remove]
@@ -150,6 +150,82 @@ def concatenateEEGs(n_sujeto, sesion, rootpath = "datasets\\",
 
     return mne.concatenate_raws(eeg_list)
 
+def loadOA(n_sujeto, rootpath = "datasets\\",montage_file = "codes\\ghiamp_montage.sfp",
+                    sfreq=512, channels_to_remove = ["A1","A2"], apply_ica=True, ica_file="ICA_OA.fif"):
+    """
+    Carga la señal de Ojos Abiertos
+    """
+
+    ##cargamos los nombres de los electrodos del g.HIAMP
+    montage_df = pd.read_csv(montage_file,sep="\t",header=None)
+    ch_names = list(montage_df[0])
+    
+    ch_names = [ch for ch in ch_names if ch not in channels_to_remove]
+    eeg_list = []
+
+    ## CARAGMOS Y FILTRAMOS LOS DATOS DEL O LA SUJETO A ESTUDIAR
+    ##Datos del sujeto y la sesión
+    
+    sujeto = f"sujeto_{n_sujeto}\\"
+
+    eeg_file = f"sujeto{n_sujeto}_oa.hdf5"
+
+    ##cargamos archivo y lo dejamos de la forma canales x muestras
+    data = h5py.File(rootpath+sujeto+eeg_file, "r")
+    raweeg = data["RawData"]["Samples"][:,:62].swapaxes(1,0) #descartamos canales A1 y A2
+
+    ##cargo los eventos marcados por el g.HIAMP
+    ##cargo los eventos generados por la app nuestra
+
+
+    ###Creación de un Montage para el posicionamiento de los electrodos
+    montage = mne.channels.read_custom_montage(montage_file)
+
+    eeg_data = makeRawData(raweeg, sfreq, channel_names=ch_names, montage=montage)
+
+    if apply_ica:
+
+        ica_file = f"{rootpath}{sujeto}{ica_file}"
+        ##cargamos el archivo ICA
+        ica = read_ica(ica_file)
+        ica.exclude = [int(comp) for comp in ica.exclude] ##ICA ya tiene almanecados los componentes a eliminar
+        ##descartamos canales en eeg_data
+        # eeg_data.drop_channels(bad_channels)
+
+        ###Aplicamos ICA a la señal
+        
+        eeg_data = ica.apply(eeg_data)
+
+    return eeg_data
+
+    ##corto la señal en events_time_ghiamp[0] -3 segundos
+
+def getHilbertERDS(eeg_data, baseline, apply_smooth = True, window_smoothing=50):
+    """
+    Retorna datos de ERDS% usando Hilbert
+    Parameters:
+    ----------
+    eeg_data : mne.Epochs
+        Objeto Epochs con datos EEG ya cargados.
+    baseline : tuple
+        Tupla con los tiempos de la línea base (tmin, tmax).
+    Returns:
+    -------
+    erds : array_like
+        Array con los datos de ERDS%.
+    """
+    hilbert_data = eeg_data.apply_hilbert(envelope=True)  # Aplicar el filtro de Hilbert
+    mean_over_trials = hilbert_data.get_data().mean(axis=0)  # Promedio de la envolvente sobre los trials
+    ti, tf = baseline
+    idx_baseline = np.where((eeg_data.times >= ti) & (eeg_data.times <= tf))[0]
+    baseline_mean = np.mean(mean_over_trials[:,idx_baseline])
+
+    erds = 100*(mean_over_trials - baseline_mean) / baseline_mean  ## Calculo el ERDS%
+    if apply_smooth:
+        # Suavizamos la señal usando una ventana de tamaño window_smoothing
+        erds = np.array([np.convolve(channel, np.ones(window_smoothing)/window_smoothing, mode='same') for channel in erds])
+        
+    return erds
 
 def compute_stft_power(eeg_signal, sfreq, nperseg=256, noverlap=128):
     """
