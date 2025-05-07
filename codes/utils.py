@@ -7,6 +7,7 @@ import h5py
 from neuroiatools.EEGManager.RawArray import makeRawData
 from mne.preprocessing import read_ica
 import scipy.signal as signal
+from dataclasses import dataclass
 
 def xml_to_sfp(xml_path, sfp_path):
     # Leer y parsear el archivo XML
@@ -200,15 +201,15 @@ def loadOA(n_sujeto, rootpath = "datasets\\",montage_file = "codes\\ghiamp_monta
 
     ##corto la señal en events_time_ghiamp[0] -3 segundos
 
-def getHilbertERDS(eeg_data, baseline, apply_smooth = True, window_smoothing=50):
+def getHilbertERDS(eeg_data, baseline, apply_smooth: bool = True, window_smoothing: int = 50):
     """
     Retorna datos de ERDS% usando Hilbert
     Parameters:
     ----------
     eeg_data : mne.Epochs
         Objeto Epochs con datos EEG ya cargados.
-    baseline : tuple
-        Tupla con los tiempos de la línea base (tmin, tmax).
+    baseline : Baseline
+        Objeto Baseline con los tiempos de la línea base (tmin, tmax), timpo de suavizado y si se aplica suavizado o no.
     Returns:
     -------
     erds : array_like
@@ -216,9 +217,9 @@ def getHilbertERDS(eeg_data, baseline, apply_smooth = True, window_smoothing=50)
     """
     hilbert_data = eeg_data.apply_hilbert(envelope=True)  # Aplicar el filtro de Hilbert
     mean_over_trials = hilbert_data.get_data().mean(axis=0)  # Promedio de la envolvente sobre los trials
-    ti, tf = baseline
-    idx_baseline = np.where((eeg_data.times >= ti) & (eeg_data.times <= tf))[0]
-    baseline_mean = np.mean(mean_over_trials[:,idx_baseline])
+    # ti, tf = baseline
+    # idx_baseline = np.where((eeg_data.times >= ti) & (eeg_data.times <= tf))[0]
+    baseline_mean = baseline.apply(mean_over_trials, hilbert_data.times)  # Calcular la línea base
 
     erds = 100*(mean_over_trials - baseline_mean) / baseline_mean  ## Calculo el ERDS%
     if apply_smooth:
@@ -226,6 +227,57 @@ def getHilbertERDS(eeg_data, baseline, apply_smooth = True, window_smoothing=50)
         erds = np.array([np.convolve(channel, np.ones(window_smoothing)/window_smoothing, mode='same') for channel in erds])
         
     return erds
+
+@dataclass
+class Baseline:
+    """
+    Clase para almacenar y aplicar un baseline a los datos EEG.
+    Attributes
+    ----------
+    baseline : tuple
+        Tupla con los tiempos de la línea base (tmin, tmax).
+    random_window : bool
+        Si es True, se aplicará una ventana aleatoria para el baseline entre los tiempos especificados en window_duration.
+    window_duration : tuple
+        Tupla con los tiempos de inicio y fin de la ventana aleatoria.
+    """
+    baseline: tuple
+    random_window:bool = False
+    window_duration:tuple = None
+
+    def __post_init__(self):
+        if not isinstance(self.baseline, tuple) or len(self.baseline) != 2:
+            raise ValueError("El atributo 'baseline' debe ser una tupla de longitud 2.")
+        ##chequeamos que window_duration sea una tupla de longitud 2, que los tiempos de inicio y fin no esten fuera de rango respecto de los tiempos de baseline
+        if self.random_window and (self.window_duration is None or not isinstance(self.window_duration, tuple) or len(self.window_duration) != 2): 
+            raise ValueError("El atributo 'window_duration' debe ser una tupla de longitud 2.")
+        if self.random_window and (self.window_duration[0] < self.baseline[0] or self.window_duration[1] > self.baseline[1]):
+            raise ValueError("Los tiempos de inicio y fin de 'window_duration' deben estar dentro del rango de 'baseline'.")
+        
+    def apply(self,data, times):
+        """
+        Aplica el baseline a los datos EEG.
+        Parameters
+        ----------
+        data : array_like shape (n_channels, n_times)
+            Datos EEG a los que se aplicará el baseline.
+        times : array_like shape (n_times,)
+            Tiempos correspondientes a los datos EEG.
+        Returns
+        -------
+        data : array_like
+            Datos EEG con el baseline aplicado.
+        """
+        ti, tf = self.baseline
+        ##si random_window es True, seleccionamos una ventana aleatoria dentro de los tiempos de baseline
+        if self.random_window:
+            ti_random = np.random.uniform(self.window_duration[0], self.window_duration[1])
+            tf_random = ti_random + (tf - ti)
+            idx_baseline = np.where((times >= ti_random) & (times <= tf_random))[0]
+        else:
+            idx_baseline = np.where((times >= ti) & (times <= tf))[0]
+
+        return np.mean(data[:,idx_baseline])
 
 def compute_stft_power(eeg_signal, sfreq, nperseg=256, noverlap=128):
     """

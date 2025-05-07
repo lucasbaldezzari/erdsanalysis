@@ -8,6 +8,8 @@ from neuroiatools.EEGManager.RawArray import makeRawData
 from neuroiatools.DisplayData.plotEEG import plotEEG
 from neuroiatools.SignalProcessor.ICA import getICA
 from codes.utils import concatenateEEGs, loadOA, getHilbertERDS
+from mne.time_frequency import tfr_morlet
+from codes.utils import Baseline
 
 ## 1. ******* Cargamos y concatenamos los datos para el sujeto y la sesión en cuestión *******
 sujeto=8
@@ -22,7 +24,8 @@ eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=False).pick(pick,"i
 # eeg_concatenados.plot_sensors(kind="topomap",show_names=True) ##probar con kind="3d"
 # plotEEG(eeg_concatenados, show=True, scalings=40, bad_color = "red")
 
-eeg_concatenados.filter(l_freq=7, h_freq=28,
+l_freq, h_freq = 7, 28
+eeg_concatenados.filter(l_freq=7, h_freq=h_freq,
            picks='eeg', 
            method='fir', 
            phase='zero-double', 
@@ -33,8 +36,6 @@ eeg_concatenados.filter(l_freq=7, h_freq=28,
 eeg_concatenados.compute_psd(fmax=100).plot(picks="data", exclude="bads", amplitude=True)
 # eeg_concatenados.plot_psd(fmin=0, fmax=100, picks='eeg', average=True, show=True)
 # eeg_concatenados.plot_psd_topo(fmin=6, fmax=40,fig_facecolor="white", color="red", axis_facecolor="white")
-
-freqs = np.arange(2, 40, 0.5)  # Frecuencias a filtrar (Hz)
 
 ## 2. ************************ SEPARANDO EN ÉPOCAS ************************
 
@@ -73,9 +74,9 @@ clase_derecha_average = clase_derecha.average()
 
 ## 3. ************************ CURVAS ERDS% USANDO HILBERT ************************
 # Graficar curva ERDS para un canal específico (por ejemplo, C3)
-baseline = (-1.5, -0.6)  # Intervalo de tiempo para el baseline
-erds_izq = getHilbertERDS(clase_izquierda, baseline, window_smoothing=50)
-erds_der = getHilbertERDS(clase_derecha, baseline, window_smoothing=50)
+baseline = Baseline((-1.5, -0.6))  # Intervalo de tiempo para el baseline
+erds_izq = getHilbertERDS(clase_izquierda, baseline, apply_smooth=True, window_smoothing=50)
+erds_der = getHilbertERDS(clase_derecha, baseline, apply_smooth=True, window_smoothing=50)
 
 plt.figure(figsize=(10, 5))
 plt.plot(clase_izquierda.times, erds_izq[c3_index, :], label=f'ERDS% en C3', color ="red")
@@ -104,6 +105,39 @@ plt.xlim(-1, 3)
 plt.ylim(-100, 100)
 plt.grid()
 plt.show()
+
+## 4. ************************ ANALISIS ESPECTRAL ************************
+freqs = np.arange(l_freq-2, h_freq+2, 0.1)  # Frecuencias a filtrar (Hz)
+baseline_rest = (-1.5, -0.6)  # Intervalo de tiempo para el baseline
+baseline_task = (0, 1)
+
+trials_izq_rest = clase_izquierda.copy().crop(tmin=baseline_rest[0], tmax=baseline_rest[1])
+trials_izq_task = clase_izquierda.copy().crop(tmin=baseline_task[0], tmax=baseline_task[1])
+trials_der_rest = clase_derecha.copy().crop(tmin=baseline_rest[0], tmax=baseline_rest[1])
+trials_der_task = clase_derecha.copy().crop(tmin=baseline_task[0], tmax=baseline_task[1])
+
+##obtengo el psd usando multitaper
+psd_izq_rest, freq_line_rest = mne.time_frequency.psd_array_multitaper(trials_izq_rest.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
+psd_izq_task, freq_line_task = mne.time_frequency.psd_array_multitaper(trials_izq_task.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
+psd_der_rest, freq_line_rest = mne.time_frequency.psd_array_multitaper(trials_der_rest.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
+psd_der_task, freq_line_task = mne.time_frequency.psd_array_multitaper(trials_der_task.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
+
+##convertimos a db
+psd_izq_rest_db = 10 * np.log10(psd_izq_rest).mean(axis=0)
+psd_izq_task_db = 10 * np.log10(psd_izq_task).mean(axis=0)
+psd_der_rest_db = 10 * np.log10(psd_der_rest).mean(axis=0)
+psd_der_task_db = 10 * np.log10(psd_der_task).mean(axis=0)
+
+plt.plot(freq_line_rest,psd_der_rest_db[c3_index, :],label="Izquierda Baseline")
+plt.plot(freq_line_task,psd_der_task_db[c3_index, :],label="Izquierda Tarea")
+plt.legend()
+plt.title("C3")
+plt.show()
+
+## 5. ************************ ANALISIS TIEMPO-FRECUENCIA ************************
+### Aplicar el análisis de Morlet para obtener la potencia en el rango de frecuencias deseado y luego tomar los datos, aplicar el baseline usando el 
+### los datos del tiempo baseline y así rasignar la data al objeto MNE.
+
 
 # ## Análisis en Tiempo-Frecuencia
 # power_left = mne.time_frequency.tfr_morlet(clase_izquierda, freqs=freqs, n_cycles=freqs/2., return_itc=False, average=True)
