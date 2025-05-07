@@ -10,10 +10,12 @@ from neuroiatools.SignalProcessor.ICA import getICA
 from codes.utils import concatenateEEGs, loadOA, getHilbertERDS
 from mne.time_frequency import tfr_morlet
 from codes.utils import Baseline
+from scipy.stats import ttest_rel
+
 
 ## 1. ******* Cargamos y concatenamos los datos para el sujeto y la sesión en cuestión *******
 sujeto=8
-sesion=2
+sesion=1
 sfreq = 512
 
 
@@ -24,7 +26,7 @@ eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=False).pick(pick,"i
 # eeg_concatenados.plot_sensors(kind="topomap",show_names=True) ##probar con kind="3d"
 # plotEEG(eeg_concatenados, show=True, scalings=40, bad_color = "red")
 
-l_freq, h_freq = 7, 28
+l_freq, h_freq = 7, 36
 eeg_concatenados.filter(l_freq=7, h_freq=h_freq,
            picks='eeg', 
            method='fir', 
@@ -78,9 +80,12 @@ baseline = Baseline((-1.5, -0.6))  # Intervalo de tiempo para el baseline
 erds_izq = getHilbertERDS(clase_izquierda, baseline, apply_smooth=True, window_smoothing=50)
 erds_der = getHilbertERDS(clase_derecha, baseline, apply_smooth=True, window_smoothing=50)
 
+plt.style.use('default')
+plt.style.available
+
 plt.figure(figsize=(10, 5))
-plt.plot(clase_izquierda.times, erds_izq[c3_index, :], label=f'ERDS% en C3', color ="red")
-plt.plot(clase_izquierda.times, erds_izq[c4_index, :], label=f'ERDS% en C4', color ="blue")
+plt.plot(clase_izquierda.times, erds_izq[c3_index, :], label=f'ERDS% en C3')
+plt.plot(clase_izquierda.times, erds_izq[c4_index, :], label=f'ERDS% en C4')
 plt.axvline(0, color='k', linestyle='--', label='Cue onset')
 plt.axhline(0, color='grey', linestyle='--')
 plt.xlabel('Tiempo (s)')
@@ -93,8 +98,8 @@ plt.grid()
 plt.show()
 
 plt.figure(figsize=(10, 5))
-plt.plot(clase_derecha.times, erds_der[c3_index, :], label=f'ERDS% en C3', color ="red")
-plt.plot(clase_derecha.times, erds_der[c4_index, :], label=f'ERDS% en C4', color ="blue")
+plt.plot(clase_derecha.times, erds_der[c3_index, :], label=f'ERDS% en C3')
+plt.plot(clase_derecha.times, erds_der[c4_index, :], label=f'ERDS% en C4')
 plt.axvline(0, color='k', linestyle='--', label='Cue onset')
 plt.axhline(0, color='grey', linestyle='--')
 plt.xlabel('Tiempo (s)')
@@ -107,31 +112,110 @@ plt.grid()
 plt.show()
 
 ## 4. ************************ ANALISIS ESPECTRAL ************************
-freqs = np.arange(l_freq-2, h_freq+2, 0.1)  # Frecuencias a filtrar (Hz)
-baseline_rest = (-1.5, -0.6)  # Intervalo de tiempo para el baseline
+freqs = np.arange(l_freq-2, h_freq+2, 1)  # Frecuencias a filtrar (Hz)
+baseline_rest = (-1.5, -0.5)  # Intervalo de tiempo para el baseline
+baseline_pretask = (-0.5, 0)  # Intervalo de tiempo para el baseline
 baseline_task = (0, 1)
+baseline_postask = (2, 3)
 
 trials_izq_rest = clase_izquierda.copy().crop(tmin=baseline_rest[0], tmax=baseline_rest[1])
 trials_izq_task = clase_izquierda.copy().crop(tmin=baseline_task[0], tmax=baseline_task[1])
+trials_izq_postask = clase_izquierda.copy().crop(tmin=baseline_postask[0], tmax=baseline_postask[1])
 trials_der_rest = clase_derecha.copy().crop(tmin=baseline_rest[0], tmax=baseline_rest[1])
 trials_der_task = clase_derecha.copy().crop(tmin=baseline_task[0], tmax=baseline_task[1])
+trials_der_postask = clase_derecha.copy().crop(tmin=baseline_postask[0], tmax=baseline_postask[1])
 
 ##obtengo el psd usando multitaper
-psd_izq_rest, freq_line_rest = mne.time_frequency.psd_array_multitaper(trials_izq_rest.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
-psd_izq_task, freq_line_task = mne.time_frequency.psd_array_multitaper(trials_izq_task.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
-psd_der_rest, freq_line_rest = mne.time_frequency.psd_array_multitaper(trials_der_rest.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
-psd_der_task, freq_line_task = mne.time_frequency.psd_array_multitaper(trials_der_task.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
+psd_izq_rest, freqline_rest = mne.time_frequency.psd_array_multitaper(trials_izq_rest.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
+psd_izq_task, freqline_task = mne.time_frequency.psd_array_multitaper(trials_izq_task.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
+psd_izq_postask, freqline_postask = mne.time_frequency.psd_array_multitaper(trials_izq_postask.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
+psd_der_rest, _ = mne.time_frequency.psd_array_multitaper(trials_der_rest.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
+psd_der_task, _ = mne.time_frequency.psd_array_multitaper(trials_der_task.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
+psd_der_postask, _ = mne.time_frequency.psd_array_multitaper(trials_der_postask.get_data(), sfreq=sfreq, fmin=l_freq, fmax=h_freq, n_jobs=1)
 
 ##convertimos a db
 psd_izq_rest_db = 10 * np.log10(psd_izq_rest).mean(axis=0)
 psd_izq_task_db = 10 * np.log10(psd_izq_task).mean(axis=0)
+psd_izq_postask_db = 10 * np.log10(psd_izq_postask).mean(axis=0)
 psd_der_rest_db = 10 * np.log10(psd_der_rest).mean(axis=0)
 psd_der_task_db = 10 * np.log10(psd_der_task).mean(axis=0)
+psd_der_postask_db = 10 * np.log10(psd_der_postask).mean(axis=0)
 
-plt.plot(freq_line_rest,psd_der_rest_db[c3_index, :],label="Izquierda Baseline")
-plt.plot(freq_line_task,psd_der_task_db[c3_index, :],label="Izquierda Tarea")
-plt.legend()
-plt.title("C3")
+crest, ctask, cposttask ="#5dade2", "#45b27b", "#e74c3c"
+fig, axes = plt.subplots(2, 2, figsize=(14, 8))
+axes[0, 0].plot(freqline_rest, psd_izq_rest_db[c4_index, :], label="Baseline", color=crest, linestyle='--')
+axes[0, 0].plot(freqline_task, psd_izq_task_db[c4_index, :], label="Tarea", color=ctask, linewidth=2)
+# Líneas de intervalo de confianza
+axes[0, 0].set_title("Baseline y Cue IZQUIERDA - Electrodo C4")
+axes[0, 1].plot(freqline_rest, psd_izq_rest_db[c4_index, :], label="Baseline", color=crest, linestyle='--')
+axes[0, 1].plot(freqline_postask, psd_izq_postask_db[c4_index, :], label="Tarea", color=cposttask, linewidth=2)
+axes[0, 1].set_title("Baseline y Post Tarea IZQUIERDA - Electrodo C4")
+axes[1, 0].plot(freqline_rest, psd_der_rest_db[c3_index, :], label="Baseline", color=crest, linestyle='--')
+axes[1, 0].plot(freqline_task, psd_der_task_db[c3_index, :], label="Tarea", color=ctask, linewidth=2)
+axes[1, 0].set_title("Baseline y Cue DERECHA - Electrodo C3")
+axes[1, 1].plot(freqline_rest, psd_der_rest_db[c3_index, :], label="Baseline", color=crest, linestyle='--')
+axes[1, 1].plot(freqline_postask, psd_der_postask_db[c3_index, :], label="Post Tarea", color=cposttask, linewidth=2)
+axes[1, 1].set_title("Baseline y Post Tarea DERECHA - Electrodo C3")
+for ax in axes.flat:
+    ax.set_xlabel("Frecuencia (Hz)")
+    ax.set_ylabel("Potencia (dB)")
+    ax.axhline(0, color='grey', linestyle='--')
+    ax.axvline(l_freq+1, color='grey', linestyle='--')
+    ax.legend()
+    ax.grid()
+plt.tight_layout()
+plt.show()
+
+##reactive band selection
+# Umbral para significancia estadística
+diff_freqs_cuebase_izq = np.log10(psd_izq_task)[:,c4_index,:].mean(axis=0) - np.log10(psd_izq_rest)[:,c4_index,:].mean(axis=0)
+mean_diff_cuebase_izq = np.mean(diff_freqs_cuebase_izq)
+std_cuebase_izq = np.std(diff_freqs_cuebase_izq) / np.sqrt(diff_freqs_cuebase_izq.shape[0])
+conf_interval_cuebase_izq = 1.96 * std_cuebase_izq
+##repito para cuebase vs posttask izq
+diff_freqs_cuepostask_izq = np.log10(psd_izq_postask)[:,c4_index,:].mean(axis=0) - np.log10(psd_izq_rest)[:,c4_index,:].mean(axis=0)
+mean_diff_cuepostask_izq = np.mean(diff_freqs_cuepostask_izq)
+std_cuepostask_izq = np.std(diff_freqs_cuepostask_izq) / np.sqrt(diff_freqs_cuepostask_izq.shape[0])
+conf_interval_cuepostask_izq = 1.96 * std_cuepostask_izq
+##repito para derecha
+diff_freqs_cuebase_der = np.log10(psd_der_task)[:,c3_index,:].mean(axis=0) - np.log10(psd_der_rest)[:,c3_index,:].mean(axis=0)
+mean_diff_cuebase_der = np.mean(diff_freqs_cuebase_der)
+std_cuebase_der = np.std(diff_freqs_cuebase_der) / np.sqrt(diff_freqs_cuebase_der.shape[0])
+conf_interval_cuebase_der = 1.96 * std_cuebase_der
+##repito para cuebase vs posttask der
+diff_freqs_cuepostask_der = np.log10(psd_der_postask)[:,c3_index,:].mean(axis=0) - np.log10(psd_der_task)[:,c3_index,:].mean(axis=0)
+mean_diff_cuepostask_der = np.mean(diff_freqs_cuepostask_der)
+std_cuepostask_der = np.std(diff_freqs_cuepostask_der) / np.sqrt(diff_freqs_cuepostask_der.shape[0])
+conf_interval_cuepostask_der = 1.96 * std_cuepostask_der
+
+color="#3f89d3"
+fig, axes = plt.subplots(2, 2, figsize=(16, 8))
+axes[0, 0].plot(freqline_rest, diff_freqs_cuebase_izq, color=color)
+axes[0, 0].axhline(mean_diff_cuebase_izq, color='grey', label='Media')
+axes[0, 0].axhline(mean_diff_cuebase_izq + conf_interval_cuebase_izq, color='grey', linestyle='-.')
+axes[0, 0].axhline(mean_diff_cuebase_izq - conf_interval_cuebase_izq, color='grey', linestyle='-.')
+axes[0, 0].set_title("Diferencia Baseline y Cue IZQUIERDA - Electrodo C4", fontsize=12)
+axes[0, 1].plot(freqline_rest, diff_freqs_cuepostask_izq, color=color)
+axes[0, 1].axhline(mean_diff_cuepostask_izq, color='grey', label='Media')
+axes[0, 1].axhline(mean_diff_cuepostask_izq + conf_interval_cuepostask_izq, color='grey', linestyle='-.')
+axes[0, 1].axhline(mean_diff_cuepostask_izq - conf_interval_cuepostask_izq, color='grey', linestyle='-.')
+axes[0, 1].set_title("Diferencia Baseline y Post Tarea IZQUIERDA - Electrodo C4", fontsize=12)
+axes[1, 0].plot(freqline_rest, diff_freqs_cuebase_der, color=color)
+axes[1, 0].axhline(mean_diff_cuebase_der, color='grey', label='Media')
+axes[1, 0].axhline(mean_diff_cuebase_der + conf_interval_cuebase_der, color='grey', linestyle='-.')
+axes[1, 0].axhline(mean_diff_cuebase_der - conf_interval_cuebase_der, color='grey', linestyle='-.')
+axes[1, 0].set_title("Diferencia Baseline y Cue DERECHA - Electrodo C3", fontsize=12)
+axes[1, 1].plot(freqline_rest, diff_freqs_cuepostask_der, color=color)
+axes[1, 1].axhline(mean_diff_cuepostask_der, color='grey', label='Media')
+axes[1, 1].axhline(mean_diff_cuepostask_der + conf_interval_cuepostask_der, color='grey', linestyle='-.')
+axes[1, 1].axhline(mean_diff_cuepostask_der - conf_interval_cuepostask_der, color='grey', linestyle='-.')
+axes[1, 1].set_title("Diferencia Baseline y Post Tarea DERECHA - Electrodo C3", fontsize=12)
+for ax in axes.flat:
+    ax.set_xlabel("Frecuencia (Hz)")
+    ax.set_ylabel("Diferencia (dB)")
+    ax.legend()
+    ax.grid()
+plt.tight_layout()
 plt.show()
 
 ## 5. ************************ ANALISIS TIEMPO-FRECUENCIA ************************
