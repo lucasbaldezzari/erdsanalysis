@@ -15,7 +15,7 @@ from scipy.stats import ttest_rel
 
 ## 1. ******* Cargamos y concatenamos los datos para el sujeto y la sesión en cuestión *******
 sujeto=8
-sesion=1
+sesion=2
 sfreq = 512
 
 
@@ -26,7 +26,7 @@ eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=False).pick(pick,"i
 # eeg_concatenados.plot_sensors(kind="topomap",show_names=True) ##probar con kind="3d"
 # plotEEG(eeg_concatenados, show=True, scalings=40, bad_color = "red")
 
-l_freq, h_freq = 7, 36
+l_freq, h_freq = 7, 28
 eeg_concatenados.filter(l_freq=7, h_freq=h_freq,
            picks='eeg', 
            method='fir', 
@@ -76,7 +76,7 @@ clase_derecha_average = clase_derecha.average()
 
 ## 3. ************************ CURVAS ERDS% USANDO HILBERT ************************
 # Graficar curva ERDS para un canal específico (por ejemplo, C3)
-baseline = Baseline((-1.5, -0.6))  # Intervalo de tiempo para el baseline
+baseline = Baseline((-1.5, -0.5))  # Intervalo de tiempo para el baseline
 erds_izq = getHilbertERDS(clase_izquierda, baseline, apply_smooth=True, window_smoothing=50)
 erds_der = getHilbertERDS(clase_derecha, baseline, apply_smooth=True, window_smoothing=50)
 
@@ -93,7 +93,7 @@ plt.ylabel('ERDS (%)')
 plt.title(f'Curva EDRS% clase IZQUIERDA')
 plt.legend()
 plt.xlim(-1, 3)
-plt.ylim(-100, 100)
+plt.ylim(-80, 80)
 plt.grid()
 plt.show()
 
@@ -107,13 +107,13 @@ plt.ylabel('ERDS (%)')
 plt.title(f'Curva EDRS% clase DERECHA')
 plt.legend()
 plt.xlim(-1, 3)
-plt.ylim(-100, 100)
+plt.ylim(-80, 80)
 plt.grid()
 plt.show()
 
 ## 4. ************************ ANALISIS ESPECTRAL ************************
-freqs = np.arange(l_freq-2, h_freq+2, 1)  # Frecuencias a filtrar (Hz)
-baseline_rest = (-1.5, -0.5)  # Intervalo de tiempo para el baseline
+freqs = np.arange(l_freq, h_freq, 0.5)  # Frecuencias a filtrar (Hz)
+baseline_rest = (-2, -1)  # Intervalo de tiempo para el baseline
 baseline_pretask = (-0.5, 0)  # Intervalo de tiempo para el baseline
 baseline_task = (0, 1)
 baseline_postask = (2, 3)
@@ -146,16 +146,16 @@ fig, axes = plt.subplots(2, 2, figsize=(14, 8))
 axes[0, 0].plot(freqline_rest, psd_izq_rest_db[c4_index, :], label="Baseline", color=crest, linestyle='--')
 axes[0, 0].plot(freqline_task, psd_izq_task_db[c4_index, :], label="Tarea", color=ctask, linewidth=2)
 # Líneas de intervalo de confianza
-axes[0, 0].set_title("Baseline y Cue IZQUIERDA - Electrodo C4")
+axes[0, 0].set_title("Baseline y Cue IZQUIERDA - C4")
 axes[0, 1].plot(freqline_rest, psd_izq_rest_db[c4_index, :], label="Baseline", color=crest, linestyle='--')
 axes[0, 1].plot(freqline_postask, psd_izq_postask_db[c4_index, :], label="Tarea", color=cposttask, linewidth=2)
-axes[0, 1].set_title("Baseline y Post Tarea IZQUIERDA - Electrodo C4")
+axes[0, 1].set_title("Baseline y Post Tarea IZQUIERDA - C4")
 axes[1, 0].plot(freqline_rest, psd_der_rest_db[c3_index, :], label="Baseline", color=crest, linestyle='--')
 axes[1, 0].plot(freqline_task, psd_der_task_db[c3_index, :], label="Tarea", color=ctask, linewidth=2)
-axes[1, 0].set_title("Baseline y Cue DERECHA - Electrodo C3")
+axes[1, 0].set_title("Baseline y Cue DERECHA - C3")
 axes[1, 1].plot(freqline_rest, psd_der_rest_db[c3_index, :], label="Baseline", color=crest, linestyle='--')
 axes[1, 1].plot(freqline_postask, psd_der_postask_db[c3_index, :], label="Post Tarea", color=cposttask, linewidth=2)
-axes[1, 1].set_title("Baseline y Post Tarea DERECHA - Electrodo C3")
+axes[1, 1].set_title("Baseline y Post Tarea DERECHA - C3")
 for ax in axes.flat:
     ax.set_xlabel("Frecuencia (Hz)")
     ax.set_ylabel("Potencia (dB)")
@@ -222,49 +222,29 @@ plt.show()
 ### Aplicar el análisis de Morlet para obtener la potencia en el rango de frecuencias deseado y luego tomar los datos, aplicar el baseline usando el 
 ### los datos del tiempo baseline y así rasignar la data al objeto MNE.
 
+tfr_izq = tfr_morlet(clase_izquierda, freqs=freqs, n_cycles=freqs/2., return_itc=False, average=False)
+tfr_der = tfr_morlet(clase_derecha, freqs=freqs, n_cycles=freqs/2., return_itc=False, average=False)
 
-# ## Análisis en Tiempo-Frecuencia
-# power_left = mne.time_frequency.tfr_morlet(clase_izquierda, freqs=freqs, n_cycles=freqs/2., return_itc=False, average=True)
-# power_right = mne.time_frequency.tfr_morlet(clase_derecha, freqs=freqs, n_cycles=freqs/2., return_itc=False, average=True)
+#indices donde freqs sea mayor a 10 y menor a 12
+indices = np.where((freqs >= 8) & (freqs <= 13))[0]
 
+tfr_izq_data_1012 = tfr_izq.data[:, :, indices, :].mean(axis=2) ##media en el eje de frecuencias
+##aplico baseline para cada trial
+for trial in range(tfr_izq_data_1012.shape[0]):
+    baseline_mean = baseline.apply(tfr_izq_data_1012[trial, :], tfr_izq.times)
+    tfr_izq_data_1012[trial, :] = 100*(tfr_izq_data_1012[trial, :] - baseline_mean) / baseline_mean
+tfr_izq_data_1012_c4 = tfr_izq_data_1012.mean(axis=0)[c4_index, :]
+##repito para derecha
+tfr_der_data_1012 = tfr_der.data[:, :, indices, :].mean(axis=2) ##media en el eje de frecuencias
+for trial in range(tfr_der_data_1012.shape[0]):
+    baseline_mean = baseline.apply(tfr_der_data_1012[trial, :], tfr_der.times)
+    tfr_der_data_1012[trial, :] = 100*(tfr_der_data_1012[trial, :] - baseline_mean) / baseline_mean
+tfr_der_data_1012_c3 = tfr_der_data_1012.mean(axis=0)[c3_index, :]
 
-# power_right.plot(picks=["C1","C2"],fmin=5, fmax=36, cmap="jet")
-# power_left.plot_topomap(tmin=0,tmax=1,fmin=7, baseline=(-1.4,-1.2), mode="percent", cmap="jet")
-
-# ## 3. ************************ CURVAS ERDS SOBRE SEÑAL FILTRADA ************************
-
-# times=epocas_concatenadas.times
-# tinit, tfinal = 0, 2
-# trial = 10
-# colors_rect = ['#9ecfcf', '#ffc899']
-# fig, ax = plt.subplots(2, 1, figsize=(12, 6))
-# ax[0].plot(times, clase_izquierda.get_data()[trial-1,c4_index,:],color="grey",label=f"Izquierda Trial {trial}")
-# ax[0].plot(times, clase_izquierda_average.get_data()[c3_index],color="black",label="Izquierda promedio")
-# ax[1].plot(times, clase_derecha.get_data()[trial-1,c3_index,:],color="grey",label=f"Derecha Trial {trial}")
-# ax[1].plot(times, clase_derecha_average.get_data()[c3_index],color="black",label="Derecha promedio")
-# ax[0].set_title("C4")
-# ax[1].set_title("C3")
-# ax[0].set_ylabel("Amplitud (uV)")
-# ax[1].set_ylabel("Amplitud (uV)")
-# ax[0].axhline(0, color='#777777', linestyle="--")
-# ax[1].axhline(0, color='#777777', linestyle="--")
-# ax[0].axvspan(tinit,tfinal, color=colors_rect[0], alpha=0.5, label="Ventana cue IZQUIERDA")
-# ax[1].axvspan(tinit,tfinal, color=colors_rect[1], alpha=0.5, label="Ventana cue DERECHA")
-# fig.suptitle("ERDS %", fontsize=20)
-# ax[0].legend(loc=4)
-# ax[1].legend(loc=4)
-# plt.show()
-
-# times=epocas_concatenadas.times
-# tinit, tfinal = 0, 2
-# trial = 15
-# colors_rect = ['#9ecfcf', '#ffc899']
-# fig, ax = plt.subplots(1, 1, figsize=(12, 6))
-# ax.plot(times, clase_izquierda_average.get_data()[c3_index],color="red",label=f"Izquierda trial {trial}")
-# ax.plot(times, clase_derecha_average.get_data()[c3_index],color="blue",label=f"Derecha trial {trial}")
-# ax.set_ylabel("Amplitud (uV)")
-# ax.axhline(0, color='#777777', linestyle="--")
-# ax.axvspan(tinit,tfinal, color="grey", alpha=0.5, label="Ventana cue")
-# fig.suptitle(f"C4 para trial {trial}", fontsize=16)
-# ax.legend(loc=4)
-# plt.show()
+window_size = 512
+tfr_izq_data_1012_c4 = np.convolve(tfr_izq_data_1012_c4, np.ones(window_size)/window_size, mode='same')
+tfr_der_data_1012_c3 = np.convolve(tfr_der_data_1012_c3, np.ones(window_size)/window_size, mode='same')
+plt.plot(tfr_izq.times, tfr_izq_data_1012_c4, label="IZQUIERDA - C4", color="blue")
+plt.plot(tfr_der.times, tfr_der_data_1012_c3, label="DERECHA - C3", color="red")
+plt.legend()
+plt.show()
