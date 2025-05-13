@@ -1,5 +1,5 @@
-# Código para analizar ERPs visuales usando MNE-Python
-# https://mne.tools/stable/auto_tutorials/evoked/30_eeg_erp.html#sphx-glr-auto-tutorials-evoked-30-eeg-erp-py
+# Código para analizar ERPs visuales usando MNE-Python. En este caso se aplica un filtro LAPLACIANO a los electrodos
+# de interés
 
 import mne
 import numpy as np
@@ -11,6 +11,9 @@ from codes.utils import concatenateEEGs, loadOA, getHilbertERDS
 from mne.time_frequency import tfr_morlet
 from codes.utils import Baseline
 from scipy.stats import ttest_rel
+from codes.utils import LaplacianFilter
+from matplotlib.colors import TwoSlopeNorm
+
 
 
 ## 1. ******* Cargamos y concatenamos los datos para el sujeto y la sesión en cuestión *******
@@ -39,7 +42,7 @@ eeg_concatenados.compute_psd(fmax=100).plot(picks="data", exclude="bads", amplit
 # eeg_concatenados.plot_psd(fmin=0, fmax=100, picks='eeg', average=True, show=True)
 # eeg_concatenados.plot_psd_topo(fmin=6, fmax=40,fig_facecolor="white", color="red", axis_facecolor="white")
 
-## 2. ************************ SEPARANDO EN ÉPOCAS ************************
+## 2. ************************ SEPARANDO EN ÉPOCAS Y APLICANDO LAPLACIANO ************************
 
 ##epOching de eeg_concatenados
 tmin, tmax = -3, 4
@@ -57,22 +60,23 @@ eventos=mne.pick_events(raw_eventos[0], include=[1,2])
 #                           event_color=dict(IZQUIERDA="red", DERECHA="blue"))
 
 ##separo los datos de cada clase
+
 c3_index, c4_index = eeg_concatenados.ch_names.index("C3"), eeg_concatenados.ch_names.index("C4")
 clase_izquierda = epocas_concatenadas["IZQUIERDA"]
-clase_derecha = epocas_concatenadas["DERECHA"]
+montage_izq = {'C4': ['C2', 'C6', 'CP4', 'FC4'],}
+laplacian = LaplacianFilter(montage_izq)
+laplacian.apply(clase_izquierda, inplace=True)
 clase_izquierda_average = clase_izquierda.average()
+
+clase_derecha = epocas_concatenadas["DERECHA"]
+montage = {'C3': ['C1', 'C5', 'CP3', 'FC3'],}
+laplacian = LaplacianFilter(montage_izq)
+laplacian.apply(clase_derecha, inplace=True)
 clase_derecha_average = clase_derecha.average()
 
-## Pasos a seguir
-
-#1. (OK ESTE PUNTO) Calcular curvas ERDS% para cada clase y para algunos canales de interés sobre
-# los trials promediados, sobre todo los que están en la región motora. Usar el registro de ojos abiertos y descansados como linea base.
-# También se podría usar Hilbert para esto. (OK ESTE PUNTO)
-
-#2. Repetir paso 1 pero ahora habiendo aplicado filtro laplaciano a los canales C3 y C4, por ejemplo
-#3. Repetir paso 1 pero ahora habiendo aplicado un CSP a los datos.
-#4. Con el CSP graficar mapas topográficos para las componentes y ver que se tiene.
-#5. Aplicar Time-Frequency Analysis a los datos y graficar mapas topográficos para las frecuencias de interés. Utilizar funciones propias y de MNE para comparar.
+clase_izquierda.plot(scalings = 40,show=True, block=True,
+                                      events=eventos, event_id=event_ids,
+                                      event_color=dict(IZQUIERDA="red", DERECHA="blue"))
 
 ## 3. ************************ CURVAS ERDS% USANDO HILBERT ************************
 # Graficar curva ERDS para un canal específico (por ejemplo, C3)
@@ -82,6 +86,9 @@ erds_der = getHilbertERDS(clase_derecha, baseline, apply_smooth=True, window_smo
 
 plt.style.use('default')
 plt.style.available
+
+derecha_color = "#0d59d4"
+izquierda_color = "#d4170d"
 
 plt.figure(figsize=(10, 5))
 plt.plot(clase_izquierda.times, erds_izq[c3_index, :], label=f'ERDS% en C3')
@@ -93,7 +100,7 @@ plt.ylabel('ERDS (%)')
 plt.title(f'Curva EDRS% clase IZQUIERDA')
 plt.legend()
 plt.xlim(-1, 3)
-plt.ylim(-80, 80)
+plt.ylim(-110, 110)
 plt.grid()
 plt.show()
 
@@ -107,9 +114,10 @@ plt.ylabel('ERDS (%)')
 plt.title(f'Curva EDRS% clase DERECHA')
 plt.legend()
 plt.xlim(-1, 3)
-plt.ylim(-80, 80)
+plt.ylim(-110, 110)
 plt.grid()
 plt.show()
+
 
 ## 4. ************************ ANALISIS ESPECTRAL ************************
 freqs = np.arange(l_freq, h_freq, 0.5)  # Frecuencias a filtrar (Hz)
@@ -166,6 +174,7 @@ for ax in axes.flat:
 plt.tight_layout()
 plt.show()
 
+
 ##reactive band selection
 # Umbral para significancia estadística
 diff_freqs_cuebase_izq = (psd_izq_task)[:,c4_index,:].mean(axis=0) - (psd_izq_rest)[:,c4_index,:].mean(axis=0)
@@ -218,6 +227,7 @@ for ax in axes.flat:
 plt.tight_layout()
 plt.show()
 
+
 ## 5. ************************ ANALISIS TIEMPO-FRECUENCIA ************************
 ### Aplicar el análisis de Morlet para obtener la potencia en el rango de frecuencias deseado y luego tomar los datos, aplicar el baseline usando el 
 ### los datos del tiempo baseline y así rasignar la data al objeto MNE.
@@ -226,7 +236,7 @@ tfr_izq = tfr_morlet(clase_izquierda, freqs=freqs, n_cycles=freqs/2., return_itc
 tfr_der = tfr_morlet(clase_derecha, freqs=freqs, n_cycles=freqs/2., return_itc=False, average=False)
 
 #indices donde freqs sea mayor a 10 y menor a 12
-indices = np.where((freqs >= 8) & (freqs <= 13))[0]
+indices = np.where((freqs >= 8) & (freqs <= 12))[0]
 
 tfr_izq_data_1012 = tfr_izq.data[:, :, indices, :].mean(axis=2) ##media en el eje de frecuencias
 ##aplico baseline para cada trial
@@ -260,33 +270,44 @@ plt.grid()
 plt.legend()
 plt.show()
 
+
 ### Aplicando baseline a "mano" a los datos de TFR para graficar los mapas topográficos
 tfr_izq_wbaseline = tfr_izq.copy()
 tfr_der_wbaseline = tfr_der.copy()
 
-tfr_izq_wbaseline.data.shape
-for trial in range(tfr_izq_wbaseline.data.shape[0]):
-    for freq in range(tfr_izq_wbaseline.data.shape[2]):
-        baseline_mean = baseline.apply(tfr_izq_wbaseline.data[trial, :, freq, :], tfr_izq_wbaseline.times)
-        tfr_izq_wbaseline.data[trial, :, freq, :] = 100*(tfr_izq_wbaseline.data[trial, :, freq, :] - baseline_mean) / baseline_mean
+# tfr_izq_wbaseline.data.shape
+# for trial in range(tfr_izq_wbaseline.data.shape[0]):
+#     for freq in range(tfr_izq_wbaseline.data.shape[2]):
+#         baseline_mean = baseline.apply(tfr_izq_wbaseline.data[trial, :, freq, :], tfr_izq_wbaseline.times)
+#         tfr_izq_wbaseline.data[trial, :, freq, :] = 100*(tfr_izq_wbaseline.data[trial, :, freq, :] - baseline_mean) / baseline_mean
 
-for trial in range(tfr_der_wbaseline.data.shape[0]):
-    for freq in range(tfr_der_wbaseline.data.shape[2]):
-        baseline_mean = baseline.apply(tfr_der_wbaseline.data[trial, :, freq, :], tfr_der_wbaseline.times)
-        tfr_der_wbaseline.data[trial, :, freq, :] = 100*(tfr_der_wbaseline.data[trial, :, freq, :] - baseline_mean) / baseline_mean
+# for trial in range(tfr_der_wbaseline.data.shape[0]):
+#     for freq in range(tfr_der_wbaseline.data.shape[2]):
+#         baseline_mean = baseline.apply(tfr_der_wbaseline.data[trial, :, freq, :], tfr_der_wbaseline.times)
+#         tfr_der_wbaseline.data[trial, :, freq, :] = 100*(tfr_der_wbaseline.data[trial, :, freq, :] - baseline_mean) / baseline_mean
 
-tfr_der_wbaseline.average().plot_topo(baseline=baseline_rest, mode='mean', title="TFR DERECHA - Baseline", colorbar=True, vmin=-50, vmax=50)
+# tfr_der_wbaseline.average().plot_topo(baseline=baseline_rest, mode='mean', title="TFR DERECHA - Baseline", colorbar=True, vmin=-50, vmax=50)
 
-tfr_der_wbaseline.average().plot_joint(
-    baseline=(-1.5, -0.5), mode="mean", tmin=-2, tmax=3, timefreqs=[(-0.5, 10), (-0.5, 12),(0.5, 10), (0.5, 12),(2, 10), (2, 12)]
-)
 
+cnorm = TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)  # min, center & max ERDS
+cmap = "RdBu_r"
 tfr_der_wbaseline.average().plot_joint(picks="C3",
-    baseline=(-1.5, -0.5), mode="mean", tmin=-2, tmax=3, timefreqs=[(-1.5,12),(-0.5, 12),(0,12),(1,12),(1.5,12)])
-tfr_der_wbaseline.average().plot_joint(picks="C3",
-    baseline=(-1.5, -0.5), mode="mean", tmin=-2, tmax=3, timefreqs=[(-1.5,25),(-0.5, 25),(0,25),(1,25),(1.5,25)])
+    baseline=(-2, -0.5), mode="percent", tmin=-2, tmax=3, cnorm = cnorm, cmap = cmap,
+    topomap_args = {"cnorm":cnorm},
+    timefreqs=[(-0.5, 10), (-0.5, 12),(0, 10), (0, 12),(0.5, 10), (0.5, 12),(1, 10), (1, 12)])
+tfr_der_wbaseline.average().plot_joint(picks="C3", cnorm = cnorm, cmap = cmap,
+    baseline=(-2, -0.5), mode="percent", tmin=-2, tmax=3,
+    timefreqs=[(-0.5, 12), (0, 12),(0.5, 12), (1, 12),(1.5, 12), (2, 12)])
+tfr_der_wbaseline.average().plot_joint(picks="C3", cnorm = cnorm, cmap = cmap,
+    baseline=(-2, -0.5), mode="percent", tmin=-2, tmax=3,
+    timefreqs=[(-0.5, 10), (0, 10),(0.5, 10), (1, 10),(1.5, 10), (2, 10)])
 
 tfr_izq_wbaseline.average().plot_joint(picks="C4",
-    baseline=(-1.5, -0.5), mode="mean", tmin=-2, tmax=3, timefreqs=[(-1.5,12),(-0.5, 12),(0,12),(1,12),(1.5,12)])
-tfr_izq_wbaseline.average().plot_joint(picks="C4",
-    baseline=(-1.5, -0.5), mode="mean", tmin=-2, tmax=3, timefreqs=[(-1.5,25),(-0.5, 25),(0,25),(1,25),(1.5,25)])
+    baseline=(-2, -0.5), mode="percent", tmin=-2, tmax=3, cnorm = cnorm, cmap = cmap,
+    timefreqs=[(-0.5, 10), (-0.5, 12),(0, 10), (0, 12),(0.5, 10), (0.5, 12),(1, 10), (1, 12)])
+tfr_izq_wbaseline.average().plot_joint(picks=["C4"], cnorm = cnorm, cmap = cmap,
+    baseline=(-2, -0.5), mode="percent", tmin=-2, tmax=3,
+    timefreqs=[(-0.5, 12), (0, 12),(0.5, 12), (1, 12),(1.5, 12), (2, 12)])
+tfr_izq_wbaseline.average().plot_joint(picks="C4", cnorm = cnorm, cmap = cmap,
+    baseline=(-2, -0.5), mode="percent", tmin=-2, tmax=3,
+    timefreqs=[(-0.5, 10), (0, 10),(0.5, 10), (1, 10),(1.5, 10), (2, 10)])

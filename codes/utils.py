@@ -279,6 +279,30 @@ class Baseline:
 
         return np.mean(data[:,idx_baseline])
 
+def getEpochsBaseline(eeg_data, baseline, times):
+    """
+    Aplica el baseline a los datos EEG.
+    Parameters
+    ----------
+    eeg_data : mne.Epochs
+        Objeto Epochs con datos EEG ya cargados.
+    baseline : Baseline
+        Objeto Baseline con los tiempos de la línea base (tmin, tmax).
+    times : array_like shape (n_times,)
+        Tiempos correspondientes a los datos EEG.
+    Returns
+    -------
+    data : array_like
+        Datos EEG con el baseline aplicado.
+    """
+    eeg_baseline = eeg_data.copy()
+    for i, trial in enumerate(eeg_data):
+        baseline_mean = baseline.apply(trial, times)
+        eeg_baseline._data[i,] = (trial - baseline_mean) / baseline_mean
+
+    return eeg_baseline
+
+
 def compute_stft_power(eeg_signal, sfreq, nperseg=256, noverlap=128):
     """
     Computa la STFT de la señal EEG y devuelve la potencia tiempo-frecuencia.
@@ -344,3 +368,144 @@ def compute_erd_ers_stft(band_power, baseline_indices, task_indices):
     erd_ers_percent = ((task_power - baseline_power) / baseline_power) * 100
     return erd_ers_percent
 
+class LaplacianFilter:
+    """
+    Filtro Laplaciano local para EEG aplicado a eeg_dataetos mne.Raw o mne.Epochs.
+    Permite sobrescribir canales o agregar canales nuevos con sufijo "_lap".
+
+    Parameters
+    ----------
+    montage : dict
+        Diccionario con claves de nombre de electrodos y valores con listas de vecinos.
+            Ejemplo: 
+            montage = {
+            'C3': ['C1', 'C5', 'CP3', 'FC3'],
+            'C4': ['C2', 'C6', 'CP4', 'FC4']}
+    """
+
+    def __init__(self, montage):
+        self.montage = montage
+
+    def apply(self, eeg_data, picks=None, inplace=True):
+        """
+        Aplica el filtro Laplaciano sobre los canales seleccionados.
+
+        Parameters
+        ----------
+        eeg_data : mne.io.Raw | mne.Epochs
+            eeg_data: objeto Raw o Epochs de MNE sobre el cual aplicar el filtro.
+        picks : list of str, optional
+            Canales a filtrar. Por defecto se filtran todos los definidos en el montaje.
+        inplace : bool, optional
+            Si True, sobrescribe los datos originales. Si False, agrega nuevos canales con sufijo '_lap'.
+        """
+        if picks is None:
+            picks = list(self.montage.keys())
+
+        data = eeg_data.get_data()  # shape: (n_channels, n_times) o (n_epochs, n_channels, n_times)
+        ch_names = eeg_data.ch_names
+        is_epochs = data.ndim == 3
+
+        for ch in picks:
+            if ch not in self.montage:
+                raise ValueError(f"No hay vecinos definidos para el canal {ch}")
+            neighbors = self.montage[ch]
+            all_required = [ch] + neighbors
+            if not all(chan in ch_names for chan in all_required):
+                raise ValueError(f"Faltan canales para calcular el Laplaciano de {ch}")
+
+            idx_c = ch_names.index(ch)
+            idx_neighbors = [ch_names.index(n) for n in neighbors]
+
+            if is_epochs:
+                lap = data[:, idx_c, :] - np.mean(data[:, idx_neighbors, :], axis=1)
+            else:
+                lap = data[idx_c, :] - np.mean(data[idx_neighbors, :], axis=0)
+
+            if inplace:
+                if is_epochs:
+                    data[:, idx_c, :] = lap
+                else:
+                    data[idx_c, :] = lap
+            else:
+                # Crear nuevo canal
+                new_ch_name = f"{ch}_lap"
+                ch_type = eeg_data.get_channel_types(picks=ch)[0]
+                info = mne.create_info([new_ch_name], eeg_data.info['sfreq'], ch_types=ch_type)
+                new_raw = mne.io.RawArray(lap[np.newaxis] if not is_epochs else lap.mean(axis=0, keepdims=True), info)
+
+                if isinstance(eeg_data, mne.io.BaseRaw):
+                    eeg_data.add_channels([new_raw], force_update_info=True)
+                elif isinstance(eeg_data, mne.Epochs):
+                    eeg_data._data = np.concatenate([eeg_data._data, lap[:, np.newaxis, :]], axis=1)
+                    eeg_data.info = mne.channels.combine_channels.combine_infos([eeg_data.info, info])
+
+        if isinstance(eeg_data, mne.io.BaseRaw):
+            eeg_data._data = data
+        elif isinstance(eeg_data, mne.Epochs):
+            eeg_data._data = data
+
+class EnvolventeEEG:
+    def __init__(self, raw_data, smoothing_window=None):
+        """
+        Inicializa la clase con el objeto mne.Raw o mne.Epochs y el tamaño de ventana para el suavizado.
+        
+        :param raw_data: Puede ser un objeto mne.Raw o mne.Epochs.
+        :param smoothing_window: Tamaño de la ventana para el suavizado. Si es None, no se aplica suavizado.
+        """
+        ##chequeamos que el objeto de entrada sea mne.Raw o mne.Epochs
+        if not isinstance(raw_data, (mne.io.Raw, mne.Epochs)):
+            raise TypeError("El objeto de entrada debe ser mne.Raw o mne.Epochs.")
+        ##chequeamos que el tamaño de la ventana sea un entero positivo
+        if smoothing_window is not None and (not isinstance(smoothing_window, int) or smoothing_window <= 0):
+            raise ValueError("El tamaño de la ventana debe ser un entero positivo.")
+        ##chequeamos que el objeto de entrada tenga datos
+        if raw_data._data is None:
+            raise ValueError("El objeto de entrada no tiene datos.")
+        self.data = raw_data.copy()  # Hacemos una copia para no modificar el original
+        self.data_envelope = None
+        self.smoothing_window = smoothing_window
+        
+    def _suavizar(self, señal):
+        """
+        Aplica suavizado (media móvil) a la señal utilizando np.convolve.
+        
+        :param señal: Array de la envolvente de la señal.
+        :return: Señal suavizada.
+        """
+        if self.smoothing_window is not None:
+            ventana = np.ones(self.smoothing_window) / self.smoothing_window  # Ventana de media móvil
+            return np.convolve(señal, ventana, mode='same')
+        return señal
+    
+    def procesar(self, db=False):
+        """
+        Reemplaza la señal de EEG por su envolvente para cada canal, utilizando apply_hilbert() y aplicando
+        suavizado si es necesario.
+        
+        :return: Objeto mne.Raw o mne.Epochs con las señales reemplazadas por sus envolventes.
+        """
+        if isinstance(self.data, mne.io.Raw):
+            # Calculamos la envolvente utilizando apply_hilbert()
+            self.data_envelope = self.data.copy().apply_hilbert(envelope=True)
+            # Suavizamos la envolvente de cada canal si es necesario
+            for ch in range(self.data.info['nchan']):
+                self.data_envelope._data[ch, :] = self._suavizar(self.data_envelope._data[ch, :])
+            # Si se desea, se puede aplicar una escala en decibelios
+            if db:
+                self.data_envelope._data = 20 * np.log10(np.abs(self.data_envelope._data))
+            return self.data_envelope
+
+        elif isinstance(self.data, mne.Epochs):
+            # Calculamos la envolvente utilizando apply_hilbert()
+            self.data_envelope = self.data.apply_hilbert(envelope=True)
+
+            # Aseguramos de suavizar cada canal de cada época
+            for ch in range(self.data.info['nchan']):
+                for epoca in range(self.data._data.shape[0]):  # Recorremos las épocas
+                    self.data_envelope._data[epoca, ch, :] = self._suavizar(self.data_envelope._data[epoca, ch, :])
+            # Si se desea, se puede aplicar una escala en decibelios
+            if db:
+                self.data_envelope._data = 20 * np.log10(np.abs(self.data_envelope._data))
+
+            return self.data_envelope
