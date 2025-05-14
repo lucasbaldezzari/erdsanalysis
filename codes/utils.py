@@ -201,7 +201,7 @@ def loadOA(n_sujeto, rootpath = "datasets\\",montage_file = "codes\\ghiamp_monta
 
     ##corto la señal en events_time_ghiamp[0] -3 segundos
 
-def getHilbertERDS(eeg_data, baseline, apply_smooth: bool = True, window_smoothing: int = 50):
+def getHilbertERDS(eeg_data, baseline, apply_smooth: bool = True, window_smoothing: int = 50, mean_trials = True):
     """
     Retorna datos de ERDS% usando Hilbert
     Parameters:
@@ -216,17 +216,28 @@ def getHilbertERDS(eeg_data, baseline, apply_smooth: bool = True, window_smoothi
         Array con los datos de ERDS%.
     """
     hilbert_data = eeg_data.apply_hilbert(envelope=True)  # Aplicar el filtro de Hilbert
-    mean_over_trials = hilbert_data.get_data().mean(axis=0)  # Promedio de la envolvente sobre los trials
-    # ti, tf = baseline
-    # idx_baseline = np.where((eeg_data.times >= ti) & (eeg_data.times <= tf))[0]
-    baseline_mean = baseline.apply(mean_over_trials, hilbert_data.times)  # Calcular la línea base
+    if mean_trials:
+        mean_over_trials = hilbert_data.get_data().mean(axis=0)  # Promedio de la envolvente sobre los trials
+        # ti, tf = baseline
+        # idx_baseline = np.where((eeg_data.times >= ti) & (eeg_data.times <= tf))[0]
+        baseline_mean = baseline.apply(mean_over_trials, hilbert_data.times)  # Calcular la línea base
 
-    erds = 100*(mean_over_trials - baseline_mean) / baseline_mean  ## Calculo el ERDS%
-    if apply_smooth:
-        # Suavizamos la señal usando una ventana de tamaño window_smoothing
-        erds = np.array([np.convolve(channel, np.ones(window_smoothing)/window_smoothing, mode='same') for channel in erds])
-        
-    return erds
+        erds = 100*(mean_over_trials - baseline_mean) / baseline_mean  ## Calculo el ERDS%
+        if apply_smooth:
+            # Suavizamos la señal usando una ventana de tamaño window_smoothing
+            erds = np.array([np.convolve(channel, np.ones(window_smoothing)/window_smoothing, mode='same') for channel in erds])
+            
+        return erds
+    else:
+        erds = hilbert_data.get_data()  # Obtener los datos de la envolvente
+        for i, trial in enumerate(hilbert_data):
+            baseline_mean = baseline.apply(trial, hilbert_data.times)
+            data_baseline = 100*(trial - baseline_mean) / baseline_mean  ## Calculo el ERDS%
+        if apply_smooth:
+            # Suavizamos la señal usando una ventana de tamaño window_smoothing
+            data_baseline = np.array([np.convolve(channel, np.ones(window_smoothing)/window_smoothing, mode='same') for channel in data_baseline])
+        erds[i] = data_baseline
+        return erds
 
 @dataclass
 class Baseline:
