@@ -1,0 +1,9 @@
+Para el analisis tiempo-frecuencia se ve bien con la siguiente configuracion:
+
+baseline_rest = (-1.5, -0.5)  # Intervalo de tiempo para el baseline
+baseline_pretask = (-0.5, 0)  # Intervalo de tiempo para el baseline
+baseline_task = (0, 1)
+baseline_postask = (2, 3)
+
+tfr_izq.average().apply_baseline(baseline_rest,mode="percent").plot(picks=electrodos)
+tfr_der.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin=0, tmax=1,fmin=8,fmax=32)
