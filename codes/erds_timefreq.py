@@ -80,6 +80,9 @@ baseline_pretask = parameters["baseline_pretask"]  # Intervalo de tiempo para el
 baseline_task = parameters["baseline_task"]
 baseline_postask = parameters["baseline_postask"]
 
+tfr_izq_base = tfr_izq.copy().apply_baseline(baseline_rest,mode="percent")
+tfr_der_base = tfr_der.copy().apply_baseline(baseline_rest,mode="percent")
+
 baseline = Baseline(tuple(baseline_rest))
 
 tfr_der_avg = tfr_der.average().apply_baseline(baseline_rest,mode="percent")
@@ -90,25 +93,27 @@ tfr_izq_avg = tfr_izq.average().apply_baseline(baseline_rest,mode="percent")
 
 banda = parameters["banda_mu"]  # Banda de frecuencias a filtrar (Hz)
 #indices donde freqs sea mayor a 10 y menor a 12
-indices = np.where((freqs >= banda[0]) & (freqs <= banda[1]))[0]
+i_freqs = np.where((freqs >= banda[0]) & (freqs <= banda[1]))[0]
 
-tfr_i_filt = tfr_izq.data[:, :, indices, :].mean(axis=2) ##media en el eje de frecuencias
-##aplico baseline para cada trial
-times = tfr_izq.times
-for i, trial in enumerate(tfr_i_filt):
-    baseline_mean = baseline.apply(trial, times)
-    tfr_i_filt[i, :] = 100*(tfr_i_filt[i, :] - baseline_mean) / baseline_mean
-tfr_i_filt_c3 = tfr_i_filt.mean(axis=0)[chizq_i, :]
-tfr_i_filt_c3_std = tfr_i_filt.mean(axis=0)[chizq_i, :]
-tfr_i_filt_c4 = tfr_i_filt.mean(axis=0)[chder_i, :]
+cluster_izq = [eeg_concatenados.ch_names.index(ch) for ch in parameters["cluster_electrodos_izq"]]
+cluster_der = [eeg_concatenados.ch_names.index(ch) for ch in parameters["cluster_electrodos_der"]]
 
-##repito para derecha
-tfr_d_filt = tfr_der.data[:, :, indices, :].mean(axis=2) ##media en el eje de frecuencias
-for i, trial in enumerate(tfr_d_filt):
-    baseline_mean = baseline.apply(trial, tfr_der.times)
-    tfr_d_filt[i, :] = 100*(tfr_d_filt[i, :] - baseline_mean) / baseline_mean
-tfr_d_filt_c3 = tfr_d_filt.mean(axis=0)[chizq_i, :]
-tfr_d_filt_c4 = tfr_d_filt.mean(axis=0)[chder_i, :]
+no_cluster = True
+
+if no_cluster:
+    tfr_i_filt_c3 = tfr_izq_base.data[:,:,i_freqs,:].mean(axis=2)[:,chizq_i,:].mean(axis=0)
+    tfr_i_filt_c4 = tfr_izq_base.data[:,:,i_freqs,:].mean(axis=2)[:,chder_i,:].mean(axis=0)
+    tfr_d_filt_c3 = tfr_der_base.data[:,:,i_freqs,:].mean(axis=2)[:,chizq_i,:].mean(axis=0)
+    tfr_d_filt_c4 = tfr_der_base.data[:,:,i_freqs,:].mean(axis=2)[:,chder_i,:].mean(axis=0)
+    title_izq = chizq_n
+    title_der = chder_n
+else:
+    tfr_i_filt_c3 = tfr_izq_base.data[:,:,i_freqs,:].mean(axis=2)[:,cluster_izq,:].mean(axis=1).mean(axis=0)
+    tfr_i_filt_c4 = tfr_izq_base.data[:,:,i_freqs,:].mean(axis=2)[:,cluster_der,:].mean(axis=1).mean(axis=0)
+    tfr_d_filt_c3 = tfr_der_base.data[:,:,i_freqs,:].mean(axis=2)[:,cluster_izq,:].mean(axis=1).mean(axis=0)
+    tfr_d_filt_c4 = tfr_der_base.data[:,:,i_freqs,:].mean(axis=2)[:,cluster_der,:].mean(axis=1).mean(axis=0)
+    title_izq = parameters["cluster_electrodos_izq"]
+    title_der = parameters["cluster_electrodos_der"]
 
 window_size = 512
 tfr_d_filt_c4_smooth = np.convolve(tfr_d_filt_c4, np.ones(window_size)/window_size, mode='same')
@@ -116,42 +121,10 @@ tfr_d_filt_c3_smooth = np.convolve(tfr_d_filt_c3, np.ones(window_size)/window_si
 tfr_i_filt_c4_smooth = np.convolve(tfr_i_filt_c4, np.ones(window_size)/window_size, mode='same')
 tfr_i_filt_c3_smooth = np.convolve(tfr_i_filt_c3, np.ones(window_size)/window_size, mode='same')
 
-# figsize=(10, 5)
-# plt.figure(figsize=figsize)
-# plt.plot(tfr_izq.times, tfr_d_filt_c4_smooth, label=chder_n, color=c_ei, linewidth=2)
-# plt.plot(tfr_der.times, tfr_d_filt_c3_smooth, label=chizq_n, color=c_ed, linewidth=2)
-# #linea vertical en 0, en -0.5 y en 2
-# plt.axvline(0, color='k', linestyle='--', label='Cue onset')
-# plt.axvline(-0.5, color='grey', linestyle='--')
-# plt.axvline(2, color='grey', linestyle='--')
-# plt.axhline(0, color='grey', linestyle='--')
-# plt.xlabel('Tiempo (s)')
-# plt.ylabel('ERDS (%)')
-# plt.title(f'DERECHA - Banda {banda[0]}-{banda[1]} Hz - {tipo_sesion}')
-# plt.grid()
-# plt.legend()
-# plt.show()
-
-# plt.figure(figsize=figsize)
-
-# plt.plot(tfr_izq.times, tfr_i_filt_c4_smooth, label=chder_n, color=c_ei, linewidth=2)
-# plt.plot(tfr_der.times, tfr_i_filt_c3_smooth, label=chizq_n, color=c_ed, linewidth=2)
-# #linea vertical en 0, en -0.5 y en 2
-# plt.axvline(0, color='k', linestyle='--', label='Cue onset')
-# plt.axvline(-0.5, color='grey', linestyle='--')
-# plt.axvline(2, color='grey', linestyle='--')
-# plt.axhline(0, color='grey', linestyle='--')
-# plt.xlabel('Tiempo (s)')
-# plt.ylabel('ERDS (%)')
-# plt.title(f'IZQUIERDA - Banda {banda[0]}-{banda[1]} Hz - {tipo_sesion}')
-# plt.grid()
-# plt.legend()
-# plt.show()
-
 c_ei, c_ed = parameters["colores_clases"] #colores para electrodos izquierdo y derecho
 cmap = parameters["cmap_topomaps"]
 fmin, fmax = banda
-ti, tf = -0.6, tmax
+ti, tf = -1.6, tmax
 times = tfr_izq.times
 i_times = np.where((times >= ti) & (times <= tf))[0]
 fig, axes = plt.subplots(1, 4, figsize=(17, 6))
@@ -162,7 +135,7 @@ axes[0].set_ylabel('Potencia (%)')
 #agrego una sombra entre los tiempos -0.5 y 0
 ymin = min(tfr_d_filt_c3_smooth[i_times].min(), tfr_i_filt_c3_smooth[i_times].min())
 ymax = max(tfr_d_filt_c3_smooth[i_times].max(), tfr_i_filt_c3_smooth[i_times].max())
-offset = 2
+offset = 0
 axes[0].fill_between(times, ymin-offset, ymax+offset, where=(times >= -0.5) & (times <= 0), color='grey', alpha=0.2)
 axes[0].fill_between(times, ymin-offset, ymax+offset, where=(times >= 0) & (times<= 2), color='#725ba0', alpha=0.2)
 axes[0].axvline(0, color='k', linestyle='-', label='Cue')
@@ -172,7 +145,7 @@ axes[0].axhline(0, color='grey', linestyle='--')
 axes[0].spines['top'].set_visible(False)
 axes[0].spines['right'].set_visible(False)
 axes[0].legend(loc="upper right") 
-axes[0].set_title(chizq_n)
+axes[0].set_title(title_izq)
 
 axes[3].plot(times[i_times], tfr_i_filt_c4_smooth[i_times], label="IZQ", color=c_ei, linewidth=2)
 axes[3].plot(times[i_times], tfr_d_filt_c4_smooth[i_times], label="DER", color=c_ed, linewidth=2)
@@ -193,7 +166,7 @@ axes[3].spines['top'].set_visible(False)
 axes[3].spines['left'].set_visible(False)
 axes[3].yaxis.tick_right()
 axes[3].legend(loc="upper right")
-axes[3].set_title(chder_n)
+axes[3].set_title(title_der)
 
 tfr_izq.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin=0, tmax=1,fmin=fmin,fmax=fmax,colorbar=False,
                                                                             cmap=cmap,show=False,axes=axes[1],contours=8,cbar_fmt="%.2f")
@@ -202,100 +175,5 @@ tfr_der.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin
 axes[1].set_title("IZQUIERDA")
 axes[2].set_title("DERECHA")
 # plt.suptitle(f"${tipo_sesion}$ - {banda[0]}-{banda[1]}Hz",fontsize=18)
-plt.tight_layout()
-plt.show()
-
-
-
-# timefreqs=[(0, 10),(0.5, 10),(1, 10),(2, 10)]
-# tfr_izq.average().apply_baseline(baseline_rest,mode="percent").plot_joint(picks=["C4","CP4"],
-#                                                                           tmin=-0.5, tmax=3,
-#                                                                           timefreqs=timefreqs,)
-# tfr_der.average().apply_baseline(baseline_rest,mode="percent").plot_joint(picks=["C3","CP3"],
-#                                                                           tmin=-0.5, tmax=3,
-#                                                                           timefreqs=timefreqs,)
-
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from matplotlib.patches import Rectangle
-
-# --- PARÁMETROS ---
-c_ei, c_ed = parameters["colores_clases"]
-cmap = parameters["cmap_topomaps"]
-fmin, fmax = banda
-ti, tf = -1, tmax
-times = tfr_izq.times
-i_times = np.where((times >= ti) & (times <= tf))[0]
-
-# --- FIGURA Y GRID ---
-fig = plt.figure(figsize=(17, 8))
-gs = gridspec.GridSpec(2, 4, height_ratios=[1, 5], width_ratios=[1.5, 1, 1, 1.5], hspace=0.025, wspace=0.1)
-
-# --- RECTÁNGULO IZQUIERDA ---
-ax_left_label = fig.add_subplot(gs[0, 1])
-ax_left_label.axis('off')
-ax_left_label.set_xlim(0, 1)
-ax_left_label.set_ylim(0, 1)
-ax_left_label.hlines(0.5, 0.1, 0.6, colors=c_ei, linewidth=2)
-ax_left_label.text(0.65, 0.5, 'Izquierda', va='center', fontsize=10, color=c_ei)
-
-# --- RECTÁNGULO DERECHA ---
-ax_right_label = fig.add_subplot(gs[0, 2])
-ax_right_label.axis('off')
-ax_right_label.set_xlim(0, 1)
-ax_right_label.set_ylim(0, 1)
-ax_right_label.hlines(0.5, 0.1, 0.6, colors=c_ed, linewidth=2)
-ax_right_label.text(0.65, 0.5, 'Derecha', va='center', fontsize=10, color=c_ed)
-
-# --- CURVA IZQUIERDA ---
-ax1 = fig.add_subplot(gs[1, 0])
-ax1.plot(times[i_times], tfr_i_filt_c4_smooth[i_times], label=chder_n, color=c_ei, linewidth=2)
-ax1.plot(times[i_times], tfr_i_filt_c3_smooth[i_times], label=chizq_n, color=c_ed, linewidth=2)
-ymin = min(tfr_i_filt_c4_smooth.min(), tfr_i_filt_c3_smooth.min())
-ymax = max(tfr_i_filt_c4_smooth.max(), tfr_i_filt_c3_smooth.max())
-offset = 2
-ax1.fill_between(times, ymin-offset, ymax+offset, where=(times >= -0.5) & (times <= 0), color='grey', alpha=0.2)
-ax1.fill_between(times, ymin-offset, ymax+offset, where=(times >= 0) & (times <= 2), color='#725ba0', alpha=0.2)
-ax1.axvline(0, color='k', linestyle='--', label='Cue')
-ax1.axvline(-0.5, color='grey', linestyle='--')
-ax1.axvline(2, color='grey', linestyle='--')
-ax1.axhline(0, color='grey', linestyle='--', label='Cue')
-ax1.spines['top'].set_visible(False)
-ax1.spines['right'].set_visible(False)
-
-# --- TOPO IZQUIERDA ---
-ax2 = fig.add_subplot(gs[1, 1])
-tfr_izq.average().apply_baseline(baseline_rest, mode="percent").plot_topomap(
-    tmin=0, tmax=1, fmin=fmin, fmax=fmax, colorbar=False, cmap=cmap, show=False,
-    axes=ax2, contours=8, cbar_fmt="%.2f"
-)
-ax2.set_title("IZQUIERDA")
-
-# --- TOPO DERECHA ---
-ax3 = fig.add_subplot(gs[1, 2])
-tfr_der.average().apply_baseline(baseline_rest, mode="percent").plot_topomap(
-    tmin=0, tmax=1, fmin=fmin, fmax=fmax, colorbar=False, cmap=cmap, show=False,
-    axes=ax3, contours=8
-)
-ax3.set_title("DERECHA")
-
-# --- CURVA DERECHA ---
-ax4 = fig.add_subplot(gs[1, 3])
-ax4.plot(times[i_times], tfr_d_filt_c4_smooth[i_times], label=chder_n, color=c_ei, linewidth=2)
-ax4.plot(times[i_times], tfr_d_filt_c3_smooth[i_times], label=chizq_n, color=c_ed, linewidth=2)
-ymin = min(tfr_d_filt_c4_smooth.min(), tfr_d_filt_c3_smooth.min())
-ymax = max(tfr_d_filt_c4_smooth.max(), tfr_d_filt_c3_smooth.max())
-ax4.fill_between(times, ymin-offset, ymax+offset, where=(times >= -0.5) & (times <= 0), color='grey', alpha=0.2)
-ax4.fill_between(times, ymin-offset, ymax+offset, where=(times >= 0) & (times <= 2), color='#725ba0', alpha=0.2)
-ax4.axvline(0, color='k', linestyle='--', label='Cue')
-ax4.axvline(-0.5, color='grey', linestyle='--')
-ax4.axvline(2, color='grey', linestyle='--')
-ax4.axhline(0, color='grey', linestyle='--', label='Cue')
-ax4.spines['top'].set_visible(False)
-ax4.spines['left'].set_visible(False)
-ax4.yaxis.tick_right()
-
-# --- TÍTULO GENERAL ---
-plt.suptitle(f"Topoplot ${tipo_sesion}$ - {banda[0]}-{banda[1]} Hz", fontsize=16)
 plt.tight_layout()
 plt.show()
