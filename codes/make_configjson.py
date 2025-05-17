@@ -6,6 +6,8 @@ parameters ={
     "electrodos": ["C3", "C4"],
     "cluster_electrodos_izq": ["C3", "CP3", "C1", "CP1","FC1","FC3"],
     "cluster_electrodos_der": ["C4", "CP4", "C2", "CP2","FC2","FC4"],
+    "channels_to_drop" : ["FP1","FP2","FPz","Fz","F8","F7","AF3","AF4","AF5","AF7","AF8","T7","T8","F9","F10"],
+    "pick" : ["FC5","FC3","FC1","FCz","FC2","FC4","FC6","C5","C3","C1","Cz","C2","C4","C6","CP5","CP3","CP1","CPz","CP2","CP4","CP6",],
     "duracion_trial": [-3, 4],
     "banda_completa": [7, 32],
     "banda_mu": [8, 13],
@@ -20,7 +22,7 @@ parameters ={
     "apply_smooth": True,
     "amplitude_rejection": 80, ##en microvolts
     "cmap_topomaps": "RdBu_r",
-    "colores_clases": ["#526edc", "#2a8d85"], #IZQUIERDA, DERECHA
+    "colores_clases": ["#45b27b", "#e74c3c"], #IZQUIERDA, DERECHA
 }
 
 ##guaradamos
