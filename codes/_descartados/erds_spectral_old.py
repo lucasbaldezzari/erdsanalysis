@@ -15,8 +15,6 @@ sujeto = 8
 sesion = 2
 sfreq = 512
 
-confidence = 0.95 # Intervalo de confianza del 95%
-
 tipo_sesion = "Ejecutada" if sesion == 1 else "Imaginada"
 
 channels_to_drop = parameters["channels_to_drop"]
@@ -64,8 +62,7 @@ clase_derecha = epocas["DERECHA"]
 
 
 ## 3. ************************ ANALISIS ESPECTRAL ************************
-delta_freq = 0.1
-freqs = np.arange(l_freq, h_freq, delta_freq)  # Frecuencias a filtrar (Hz)
+freqs = np.arange(l_freq, h_freq, 0.1)  # Frecuencias a filtrar (Hz)
 n_cycles = freqs / 1.5
 baseline_rest = parameters["baseline_rest"]  # Intervalo de tiempo para el baseline
 baseline_pretask = parameters["baseline_pretask"]  # Intervalo de tiempo para el baseline
@@ -110,6 +107,23 @@ else:
     der_task_multi = der_task_multi_orig
     der_post_multi = der_post_multi_orig
 
+## ************** REACTIVE BAND ********************
+
+# no_cluster = False
+
+# if no_cluster:
+#     reactive_psd_izq_rest = izq_rest_multi[:,chder_i,:,:].mean((0,2)) #promedio primero sobre trials y luego sobre canales
+#     # reactive_psd_izq_pretask = izq_pretask_multi[:,chder_i,:,:].mean((0,2))
+#     reactive_psd_izq_task = izq_task_multi[:,chder_i,:,:].mean((0,2))
+#     reactive_psd_izq_postask = izq_post_multi[:,chder_i,:,:].mean((0,2))
+
+#     reactive_psd_der_rest = der_rest_multi[:,chizq_i,:,:].mean((0,2))
+#     # reactive_psd_der_pretask = der_pretask_multi[:,chizq_i,:,:].mean((0,2))
+#     reactive_psd_der_task = der_task_multi[:,chizq_i,:,:].mean((0,2))
+#     reactive_psd_der_postask = der_post_multi[:,chizq_i,:,:].mean((0,2))
+
+# else:
+
 reactive_psd_izq_rest = izq_rest_multi[:,cluster_izq,:,:].mean((0,1,3)) #promedio sobre trials, luego canales y luego tiempo
 # reactive_psd_izq_pretask = izq_pretask_multi[:,cluster_izq,:,:].mean((0,1,3))
 reactive_psd_izq_task = izq_task_multi[:,cluster_izq,:,:].mean((0,1,3))
@@ -120,85 +134,70 @@ reactive_psd_der_rest = der_rest_multi[:,cluster_der,:,:].mean((0,1,3))
 reactive_psd_der_task = der_task_multi[:,cluster_der,:,:].mean((0,1,3))
 reactive_psd_der_postask = der_post_multi[:,cluster_der,:,:].mean((0,1,3))
 
-### IZQUIERDA ###
-##diferencia entre la tarea y rest
-n_izq_trials = epocas["IZQUIERDA"].events.shape[0]
+diff = izq_task_multi_orig[:,cluster_der,:,:] - izq_rest_multi_orig[:,cluster_der,:,:]
+diff_avg = np.mean(diff, axis=(1, 3))  # shape: (18, 513)
+n_trials = diff_avg.shape[0]
+confidence = 0.95
 
-diff_tr_izq_avg = (izq_task_multi[:,cluster_der,:,:] - izq_rest_multi[:,cluster_der,:,:]).mean((1,3))
-mean_diff_tr_izq = diff_tr_izq_avg.mean(0)
-global_mean_diff_tr_izq = diff_tr_izq_avg.mean()
-sem_diff_tr_izq_avg = sem(diff_tr_izq_avg, axis=0)
-confinter_tr_izq = sem_diff_tr_izq_avg * t.ppf((1 + confidence) / 2, df=n_izq_trials - 1)
+mean_diff = np.mean(diff_avg, axis=0) 
+sem_diff = sem(diff_avg, axis=0)       # SEM: error estándar de la media
+# Intervalo t para muestras pequeñas
+h = sem_diff * t.ppf((1 + confidence) / 2, df=n_trials - 1)
+global_mean = np.mean(mean_diff)
+global_ci_upper = global_mean + np.mean(h)
+global_ci_lower = global_mean - np.mean(h)
 
-##diferencia entre tarea y postask izquierda
-diff_tr_izq_postask_avg = (izq_post_multi[:,cluster_der,:,:] - izq_rest_multi[:,cluster_der,:,:]).mean((1,3))
-mean_diff_pr_izq = diff_tr_izq_postask_avg.mean(0)
-global_mean_diff_pr_izq = diff_tr_izq_postask_avg.mean()
-sem_diff_pr_izq_avg = sem(diff_tr_izq_postask_avg, axis=0)
-confinter_pr_izq = sem_diff_pr_izq_avg * t.ppf((1 + confidence) / 2, df=n_izq_trials - 1)
+confidence = 0.99
+n = reactive_psd_izq_task.shape[0] #n es el mismo para todas las variables a usar
+t_crit = stats.t.ppf(1 - (1 - confidence) / 2, df = n - 1)
 
-### DERECHA ###
-##diferencia entre la tarea y rest derecha
-n_der_trials = epocas["DERECHA"].events.shape[0]
+#cálculo de diferencias, media e intervalo de confianza para clase izquierda sobre electrodos de la derecha
+diff_tr_izq = reactive_psd_izq_task - reactive_psd_izq_rest #diferencia de potencia entre task y rest clase izquierda
+# diff_tr_izq = 20*np.log10(reactive_psd_izq_task/reactive_psd_izq_rest) #en dB
+mean_diff_tr_izq = np.mean(diff_tr_izq)
+std_tr_izq = np.std(diff_tr_izq, ddof=1) / np.sqrt(n) #error estándar de la media (debemos dividir por n^(1/2))
+confinter_tr_izq = t_crit * std_tr_izq #intervalo de confianza para task - rest
 
-diff_tr_der_avg = (der_task_multi[:,cluster_izq,:,:] - der_rest_multi[:,cluster_izq,:,:]).mean((1,3))
-mean_diff_tr_der = diff_tr_der_avg.mean(0)
-global_mean_diff_tr_der = diff_tr_der_avg.mean()
-sem_diff_tr_der_avg = sem(diff_tr_der_avg, axis=0)
-confinter_tr_der = sem_diff_tr_der_avg * t.ppf((1 + confidence) / 2, df=n_der_trials - 1)
+diff_pr_izq = reactive_psd_izq_postask - reactive_psd_izq_rest #diferencia de potencia entre post_task y rest clase izquierda
+mean_diff_pr_izq = np.mean(diff_pr_izq)
+std_pr_izq = np.std(diff_pr_izq, ddof=1) / np.sqrt(n) #error estándar de la media (debemos dividir por n^(1/2))
+confinter_pr_izq = t_crit * std_pr_izq #intervalo de confianza para post_task - rest
 
-##diferencia entre tarea y postask derecha
-diff_tr_der_postask_avg = (der_post_multi[:,cluster_izq,:,:] - der_rest_multi[:,cluster_izq,:,:]).mean((1,3))
-mean_diff_pr_der = diff_tr_der_postask_avg.mean(0)
-global_mean_diff_pr_der = diff_tr_der_postask_avg.mean()
-sem_diff_pr_der_avg = sem(diff_tr_der_postask_avg, axis=0)
-confinter_pr_der = sem_diff_pr_der_avg * t.ppf((1 + confidence) / 2, df=n_der_trials - 1)
+# diff_prr_izq = reactive_psd_izq_pretask - reactive_psd_izq_rest #diferencia de potencia entre post_task y pre_task clase izquierda
+# mean_diff_prr_izq = np.mean(diff_prr_izq)
+# std_prr_izq = np.std(diff_prr_izq, ddof=1) / np.sqrt(n) #error estándar de la media (debemos dividir por n^(1/2))
+# confinter_prr_izq = t_crit * std_prr_izq #intervalo de confianza para post_task - pre_task
 
-def getIntervalos(freqs, paso):
-    """
-    Función para obtener una lista de lista de intervalos a partir de una de intervalos y un paso.
-    Se toman los intervalos y cuando el siguiente intervalo supera el paso, se crea un nuevo intervalo.
-    """
-    lista_intervalos = []
-    if len(freqs) > 0:
-        intervalo_actual = [float(np.round(freqs[0],1))]
-        for i in range(1, len(freqs)):
-            if freqs[i] - intervalo_actual[-1] > paso:
-                lista_intervalos.append(intervalo_actual)
-                intervalo_actual = [float(np.round(freqs[i],1))] # reiniciamos el intervalo actual
-            else:
-                intervalo_actual.append(float(np.round(freqs[i],1)))
-        lista_intervalos.append(intervalo_actual) # añadimos el último intervalo
-        ##ordeno de menor a mayor cada intervalo
-        for i in range(len(lista_intervalos)):
-            lista_intervalos[i] = sorted(lista_intervalos[i])
-    return lista_intervalos
+##repito para derecha
+diff_tr_der = reactive_psd_der_task - reactive_psd_der_rest #diferencia de potencia entre task y rest clase derecha
+mean_diff_tr_der = np.mean(diff_tr_der)
+std_tr_der = np.std(diff_tr_der) / np.sqrt(n)
+confinter_tr_der = t_crit * std_tr_der
 
-##vamos a intentar replicar la gráfica izquierda y arriba de 45.2 del artículo 
+diff_pr_der = reactive_psd_der_postask - reactive_psd_der_rest #diferencia de potencia entre posta_task y rest clase derecha
+mean_diff_pr_der = np.mean(diff_pr_der)
+std_pr_der = np.std(diff_pr_der) / np.sqrt(n)
+confinter_pr_der = t_crit * std_pr_der
+
+# diff_prr_der = reactive_psd_der_pretask - reactive_psd_der_rest #diferencia de potencia entre post_task y pre_task clase derecha
+# mean_diff_prr_der = np.mean(diff_prr_der)
+# std_prr_der = np.std(diff_prr_der) / np.sqrt(n)
+# confinter_prr_der = t_crit * std_prr_der
+
+##vamos a intentar replicar la gráfica derecha y arriba de 45.2 del artículo 
 ##https://neupsykey.com/eeg-event-related-desynchronization-erd-and-event-related-synchronization-ers/#R1-45
 
-crest, ctask, cposttask = "#000000", "#f7525f", "#006b3c"
-cdiff = "#4f7899"
+crest, ctask, cposttask = "#5dade2", "#45b27b", "#e74c3c"
+cdiff = "#fc948f"
 figsize=(8, 10)
 title_fontsize=14
 label_fs=14
 
-
-# sig_freqs = list(freqsabove) + list(freqsbelow)
-## ***** Gráfica para clase IZQUIERDA *****
 fig, axes = plt.subplots(4, 1, figsize=figsize, constrained_layout=True)
-axes[0].plot(freqs, mean_diff_tr_izq, label=r"${\Delta}{{\mu}^2}$", color=cdiff, linestyle='--')
-axes[0].axhline(global_mean_diff_tr_izq, color='grey')
-axes[0].axhline(global_mean_diff_tr_izq + confinter_tr_izq.mean(), color='grey', linestyle='-.')
-axes[0].axhline(global_mean_diff_tr_izq - confinter_tr_izq.mean(), color='grey', linestyle='-.')
-freqsabove = freqs[np.where(mean_diff_tr_izq > global_mean_diff_tr_izq + confinter_tr_izq.mean())[0]]
-intervalos_above = getIntervalos(freqsabove.copy(), delta_freq)
-for intervalo in intervalos_above:
-    axes[0].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-freqsbelow = freqs[np.where(mean_diff_tr_izq < global_mean_diff_tr_izq - confinter_tr_izq.mean())[0]]
-intervalos_below = getIntervalos(freqsbelow, delta_freq)
-for intervalo in intervalos_below:
-    axes[0].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
+axes[0].plot(freqs, diff_tr_izq, label=r"${\Delta}{{\mu}^2}$", color=cdiff,)
+axes[0].axhline(mean_diff_tr_izq, color='grey')
+axes[0].axhline(mean_diff_tr_izq + confinter_tr_izq, color='grey', linestyle='-.')
+axes[0].axhline(mean_diff_tr_izq - confinter_tr_izq, color='grey', linestyle='-.')
 axes[0].spines['top'].set_visible(False)
 axes[0].spines['bottom'].set_visible(False)
 axes[0].spines['right'].set_visible(False)
@@ -207,37 +206,17 @@ axes[0].tick_params(axis='x', which='both', bottom=False, top=False, labelbottom
 axes[0].tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
 axes[0].set_title(f"A1: {baseline_task} segundos", loc='left')
 
-axes[1].plot(freqs, reactive_psd_izq_rest, label="R", linestyle=':', color = crest, linewidth=2) 
+axes[1].plot(freqs, reactive_psd_izq_rest, label="R", linestyle=':', linewidth=1) 
 axes[1].plot(freqs, reactive_psd_izq_task, label="A1", color=ctask, linewidth=2)
-for intervalo in intervalos_above:
-    axes[1].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-    centro = np.mean(intervalo)
-    freqi = intervalo[0]
-    freqf = intervalo[-1]
-    axes[1].text(centro, 0.5, f"{freqi}-{freqf} Hz", ha='center', va='bottom', fontsize=11, color='k', rotation=45)
-for intervalo in intervalos_below:
-    axes[1].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-    centro = np.mean(intervalo)
-    freqi = intervalo[0]
-    freqf = intervalo[-1]
-    axes[1].text(centro, 0.5, f"{freqi}-{freqf} Hz", ha='center', va='bottom', fontsize=11, color='k', rotation=45)
 axes[1].spines['top'].set_visible(False)
 axes[1].spines['right'].set_visible(False)
 axes[1].tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
 axes[1].legend(loc="upper right", fontsize=label_fs)
 
-axes[2].plot(freqs, mean_diff_pr_izq, label=r"${\Delta}{{\mu}^2}$", color=cdiff, linestyle='--')
-axes[2].axhline(global_mean_diff_pr_izq, color='grey')
-axes[2].axhline(global_mean_diff_pr_izq + confinter_pr_izq.mean(), color='grey', linestyle='-.')
-axes[2].axhline(global_mean_diff_pr_izq - confinter_pr_izq.mean(), color='grey', linestyle='-.')
-freqsabove = freqs[np.where(mean_diff_pr_izq > global_mean_diff_pr_izq + confinter_pr_izq.mean())[0]]
-intervalos_above = getIntervalos(freqsabove, delta_freq)
-for intervalo in intervalos_above:
-    axes[2].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-freqsbelow = freqs[np.where(mean_diff_pr_izq < global_mean_diff_pr_izq - confinter_pr_izq.mean())[0]]
-intervalos_below = getIntervalos(freqsbelow, delta_freq)
-for intervalo in intervalos_below:
-    axes[2].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
+axes[2].plot(freqs, diff_pr_izq, label=r"${\Delta}{{\mu}^2}$", color=cdiff)
+axes[2].axhline(mean_diff_pr_izq, color='grey')
+axes[2].axhline(mean_diff_pr_izq + confinter_tr_izq, color='grey', linestyle='-.')
+axes[2].axhline(mean_diff_pr_izq - confinter_tr_izq, color='grey', linestyle='-.')
 axes[2].spines['top'].set_visible(False)
 axes[2].spines['bottom'].set_visible(False)
 axes[2].spines['right'].set_visible(False)
@@ -246,20 +225,8 @@ axes[2].tick_params(axis='x', which='both', bottom=False, top=False, labelbottom
 axes[2].tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
 axes[2].set_title(f"A2: {baseline_postask} segundos", loc='left')
 
-axes[3].plot(freqs, reactive_psd_izq_rest, label="R", linestyle=':', color = crest, linewidth=2)
+axes[3].plot(freqs, reactive_psd_izq_rest, label="R", linestyle=':', linewidth=1)
 axes[3].plot(freqs, reactive_psd_izq_postask, label="A2", color=cposttask, linewidth=2)
-for intervalo in intervalos_above:
-    axes[3].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-    centro = np.mean(intervalo)
-    freqi = intervalo[0]
-    freqf = intervalo[-1]
-    axes[3].text(centro, 0.5, f"{freqi}-{freqf} Hz", ha='center', va='bottom', fontsize=11, color='k', rotation=45)
-for intervalo in intervalos_below:
-    axes[3].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-    centro = np.mean(intervalo)
-    freqi = intervalo[0]
-    freqf = intervalo[-1]
-    axes[3].text(centro, 0.5, f"{freqi}-{freqf} Hz", ha='center', va='bottom', fontsize=11, color='k', rotation=45)
 axes[3].spines['top'].set_visible(False)
 axes[3].spines['right'].set_visible(False)
 axes[3].tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
@@ -268,20 +235,13 @@ axes[3].legend(loc="upper right", fontsize=label_fs)
 plt.suptitle(f"IZQUIERDA {tipo_sesion} - Suj. {sujeto}", fontsize=title_fontsize)
 plt.show()
 
-## ***** Gráfica para clase DERECHA *****
+
+## Repito gráfico para clase derecha
 fig, axes = plt.subplots(4, 1, figsize=figsize, constrained_layout=True)
-axes[0].plot(freqs, mean_diff_tr_der, label=r"${\Delta}{{\mu}^2}$", color=cdiff, linestyle='--')
-axes[0].axhline(global_mean_diff_tr_der, color='grey')
-axes[0].axhline(global_mean_diff_tr_der + confinter_tr_der.mean(), color='grey', linestyle='-.')
-axes[0].axhline(global_mean_diff_tr_der - confinter_tr_der.mean(), color='grey', linestyle='-.')
-freqsabove = freqs[np.where(mean_diff_tr_der > global_mean_diff_tr_der + confinter_tr_der.mean())[0]]
-intervalos_above = getIntervalos(freqsabove.copy(), delta_freq)
-for intervalo in intervalos_above:
-    axes[0].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-freqsbelow = freqs[np.where(mean_diff_tr_der < global_mean_diff_tr_der - confinter_tr_der.mean())[0]]
-intervalos_below = getIntervalos(freqsbelow, delta_freq)
-for intervalo in intervalos_below:
-    axes[0].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
+axes[0].plot(freqs, diff_tr_der, label=r"${\Delta}{{\mu}^2}$", color=cdiff,)
+axes[0].axhline(mean_diff_tr_der, color='grey')
+axes[0].axhline(mean_diff_tr_der + confinter_tr_der, color='grey', linestyle='-.')
+axes[0].axhline(mean_diff_tr_der - confinter_tr_der, color='grey', linestyle='-.')
 axes[0].spines['top'].set_visible(False)
 axes[0].spines['bottom'].set_visible(False)
 axes[0].spines['right'].set_visible(False)
@@ -290,37 +250,17 @@ axes[0].tick_params(axis='x', which='both', bottom=False, top=False, labelbottom
 axes[0].tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
 axes[0].set_title(f"A1: {baseline_task} segundos", loc='left')
 
-axes[1].plot(freqs, reactive_psd_der_rest, label="R", linestyle=':', color = crest, linewidth=2) 
+axes[1].plot(freqs, reactive_psd_der_rest, label="R", linestyle=':', linewidth=1) 
 axes[1].plot(freqs, reactive_psd_der_task, label="A1", color=ctask, linewidth=2)
-for intervalo in intervalos_above:
-    axes[1].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-    centro = np.mean(intervalo)
-    freqi = intervalo[0]
-    freqf = intervalo[-1]
-    axes[1].text(centro, 0.5, f"{freqi}-{freqf} Hz", ha='center', va='bottom', fontsize=11, color='k', rotation=45)
-for intervalo in intervalos_below:
-    axes[1].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-    centro = np.mean(intervalo)
-    freqi = intervalo[0]
-    freqf = intervalo[-1]
-    axes[1].text(centro, 0.5, f"{freqi}-{freqf} Hz", ha='center', va='bottom', fontsize=11, color='k', rotation=45)
 axes[1].spines['top'].set_visible(False)
 axes[1].spines['right'].set_visible(False)
 axes[1].tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
 axes[1].legend(loc="upper right", fontsize=label_fs)
 
-axes[2].plot(freqs, mean_diff_pr_der, label=r"${\Delta}{{\mu}^2}$", color=cdiff, linestyle='--')
-axes[2].axhline(global_mean_diff_pr_der, color='grey')
-axes[2].axhline(global_mean_diff_pr_der + confinter_pr_der.mean(), color='grey', linestyle='-.')
-axes[2].axhline(global_mean_diff_pr_der - confinter_pr_der.mean(), color='grey', linestyle='-.')
-freqsabove = freqs[np.where(mean_diff_pr_der > global_mean_diff_pr_der + confinter_pr_der.mean())[0]]
-intervalos_above = getIntervalos(freqsabove, delta_freq)
-for intervalo in intervalos_above:
-    axes[2].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-freqsbelow = freqs[np.where(mean_diff_pr_der < global_mean_diff_pr_der - confinter_pr_der.mean())[0]]
-intervalos_below = getIntervalos(freqsbelow, delta_freq)
-for intervalo in intervalos_below:
-    axes[2].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
+axes[2].plot(freqs, diff_pr_izq, label=r"${\Delta}{{\mu}^2}$", color=cdiff)
+axes[2].axhline(mean_diff_pr_der, color='grey')
+axes[2].axhline(mean_diff_pr_der + confinter_tr_der, color='grey', linestyle='-.')
+axes[2].axhline(mean_diff_pr_der - confinter_tr_der, color='grey', linestyle='-.')
 axes[2].spines['top'].set_visible(False)
 axes[2].spines['bottom'].set_visible(False)
 axes[2].spines['right'].set_visible(False)
@@ -329,20 +269,8 @@ axes[2].tick_params(axis='x', which='both', bottom=False, top=False, labelbottom
 axes[2].tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
 axes[2].set_title(f"A2: {baseline_postask} segundos", loc='left')
 
-axes[3].plot(freqs, reactive_psd_der_rest, label="R", linestyle=':', color = crest, linewidth=2)
+axes[3].plot(freqs, reactive_psd_der_rest, label="R", linestyle=':', linewidth=1)
 axes[3].plot(freqs, reactive_psd_der_postask, label="A2", color=cposttask, linewidth=2)
-for intervalo in intervalos_above:
-    axes[3].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-    centro = np.mean(intervalo)
-    freqi = intervalo[0]
-    freqf = intervalo[-1]
-    axes[3].text(centro, 0.5, f"{freqi}-{freqf} Hz", ha='center', va='bottom', fontsize=11, color='k', rotation=45)
-for intervalo in intervalos_below:
-    axes[3].axvspan(intervalo[0], intervalo[-1], color='grey', alpha=0.2)
-    centro = np.mean(intervalo)
-    freqi = intervalo[0]
-    freqf = intervalo[-1]
-    axes[3].text(centro, 0.5, f"{freqi}-{freqf} Hz", ha='center', va='bottom', fontsize=11, color='k', rotation=45)
 axes[3].spines['top'].set_visible(False)
 axes[3].spines['right'].set_visible(False)
 axes[3].tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
