@@ -1,6 +1,7 @@
 {
     "sujeto": 8,
-    "sesion": 2,
+    "sesion": 1
+    ,
     "electrodos": [
         "C3",
         "C4"
