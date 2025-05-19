@@ -25,7 +25,9 @@ parameters ={
     "amplitude_rejection": 80, ##en microvolts
     "cmap_topomaps": "RdBu_r",
     "colores_clases": ["#45b27b", "#e74c3c"], #IZQUIERDA, DERECHA
-    "confidence": 0.95
+    "confidence": 0.95,
+    "show_figures": True,
+    "save_figures": True,
 }
 
 ##guaradamos

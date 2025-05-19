@@ -1,7 +1,6 @@
 {
     "sujeto": 8,
-    "sesion": 1
-    ,
+    "sesion": 2,
     "electrodos": [
         "C3",
         "C4"
@@ -104,5 +103,7 @@
         "#45b27b",
         "#e74c3c"
     ],
-    "confidence": 0.95
+    "confidence": 0.95,
+    "show_figures": true,
+    "save_figures": true
 }

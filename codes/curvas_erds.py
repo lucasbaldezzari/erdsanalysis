@@ -2,11 +2,9 @@ import mne
 import numpy as np
 import matplotlib.pyplot as plt
 from codes.utils import concatenateEEGs, getHilbertERDS
-from mne.time_frequency import tfr_morlet
 from codes.utils import Baseline
-from matplotlib.colors import TwoSlopeNorm
-from codes.utils import LaplacianFilter, EnvolventeEEG
 import json
+import os
 
 ## 1. ******* CARGAMOS Y CONCATENAMOS LOS DATOS PARA EL/LA SUJETO EN CUESTIÓN *******
 ##cargo codes\\parameters.json
@@ -21,17 +19,16 @@ channels_to_drop = parameters["channels_to_drop"]
 pick = parameters["pick"]
 confidence = parameters["confidence"]
 
+##para mostrar y guardar gráficos
+show = parameters["show_figures"]
+save = parameters["save_figures"]
+
+## folder a donde guardar los gráficos
+root_path = os.path.join("datasets", f"sujeto_{sujeto}","figures")
+if not os.path.exists(root_path):
+    os.makedirs(root_path)
+
 eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=False).drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
-# eeg_concatenados.plot_sensors(kind="topomap",show_names=True) ##probar con kind="3d"
-
-# montage = {"C4": ["C2", "C6", "CP4", "FC4"],
-#            "C3": ["C1", "C5", "CP3", "FC3"]
-#            }
-
-# lapfilter = LaplacianFilter(montage)
-# lapfilter.apply(eeg_concatenados, inplace=True)
-
-# plotEEG(eeg_concatenados, show=True, scalings=40, bad_color = "red")
 
 l_freq, h_freq = parameters["banda_completa"]
 eeg_concatenados.filter(l_freq=l_freq, h_freq=h_freq,
@@ -40,10 +37,6 @@ eeg_concatenados.filter(l_freq=l_freq, h_freq=h_freq,
            phase="zero-double", 
            fir_window="hamming",
            filter_length="auto")
-
-##graficamos el espectro de potencia de los datos
-# eeg_concatenados.compute_psd(fmax=100).plot(picks="data", exclude="bads", amplitude=True)
-
 ## 2. ************************ SEPARANDO EN ÉPOCAS ************************
 
 ##epOching de eeg_concatenados
@@ -54,7 +47,7 @@ epocas = mne.Epochs(eeg_concatenados, event_id=["IZQUIERDA", "DERECHA"],
                                  baseline=None, preload=True,reject={"eeg":80})
 
 raw_eventos = mne.events_from_annotations(eeg_concatenados, event_id=event_ids)
-eventos=mne.pick_events(raw_eventos[0], include=[1,2])
+eventos = mne.pick_events(raw_eventos[0], include=[1,2])
 
 # epocas.plot(scalings = 80,show=True, block=True,
 #                           events=eventos,
@@ -82,8 +75,9 @@ baseline_pretask = parameters["baseline_pretask"]  # Intervalo de tiempo para el
 baseline_task = parameters["baseline_task"]
 baseline_postask = parameters["baseline_postask"]
 baseline = Baseline(tuple(baseline_rest))
-erds_izq = getHilbertERDS(clase_izquierda, baseline, apply_smooth=True, window_smoothing=102, mean_trials=True)
-erds_der = getHilbertERDS(clase_derecha, baseline, apply_smooth=True, window_smoothing=102, mean_trials=True)
+ws = 256
+erds_izq = getHilbertERDS(clase_izquierda, baseline, apply_smooth=True, window_smoothing=ws, mean_trials=True)
+erds_der = getHilbertERDS(clase_derecha, baseline, apply_smooth=True, window_smoothing=ws, mean_trials=True)
 
 
 c_ei, c_ed = parameters["colores_clases"] #colores para electrodos izquierdo y derecho
@@ -93,7 +87,7 @@ times = clase_izquierda.times
 ti, tf = -1.6, tmax
 idx = np.where((times >= ti) & (times <= tf))[0]
 i_times = np.where((times >= ti) & (times <= tf))[0]
-fig, axes = plt.subplots(1, 2, figsize=(5, 6))
+fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 axes[0].plot(times[idx], erds_izq[cluster_izq].mean(0)[idx], label="IZQUIERDA", color=c_ei, linewidth=2)
 axes[0].plot(times[idx], erds_der[cluster_izq].mean(0)[idx], label="DERECHA", color=c_ed, linewidth=2)
 axes[0].axvline(0, color="k", linestyle="--", label="Cue onset")
@@ -125,5 +119,8 @@ ymax = max(erds_izq[cluster_der].mean(0)[idx].max(), erds_der[cluster_der].mean(
 axes[1].fill_between(times, ymin, ymax, where=(times >= -0.5) & (times <= 0), color='grey', alpha=0.2)
 axes[1].fill_between(times, ymin, ymax, where=(times >= 0) & (times<= 2), color=sombra_cue, alpha=0.2, label="Tarea")
 axes[1].legend(loc="lower right")
-
-plt.show()
+if save:
+    plt.savefig(os.path.join(root_path, f"erds_voltaje_{sujeto}_{tipo_sesion}.png"), dpi=350)
+if show:
+    plt.show()
+plt.close(fig)

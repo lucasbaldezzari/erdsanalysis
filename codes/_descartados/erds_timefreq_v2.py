@@ -61,6 +61,10 @@ epocas = mne.Epochs(eeg_concatenados, event_id=["IZQUIERDA", "DERECHA"],
 raw_eventos = mne.events_from_annotations(eeg_concatenados, event_id=event_ids)
 eventos=mne.pick_events(raw_eventos[0], include=[1,2])
 
+# epocas.plot(scalings = 80,show=True, block=True,
+#                           events=eventos,
+#                           event_id=event_ids,
+#                           event_color=dict(IZQUIERDA="red", DERECHA="blue"))
 
 chs_names = parameters["electrodos"]
 chizq_n = chs_names[0] #nombre del canal izquierdo
@@ -75,12 +79,15 @@ clase_derecha = epocas["DERECHA"]
 ### Aplicar el análisis de Morlet para obtener la potencia en el rango de frecuencias deseado y luego tomar los datos, aplicar el baseline usando el 
 ### los datos del tiempo baseline y así rasignar la data al objeto MNE.
 
-delta_freq = 0.2
+delta_freq = 0.3
 freqs = np.arange(l_freq, h_freq, delta_freq) 
 n_cycles = freqs / 1.5
 
 tfr_izq = clase_izquierda.compute_tfr(method="multitaper", freqs=freqs, n_cycles=n_cycles, time_bandwidth=2.0, n_jobs=1, average=False)
 tfr_der = clase_derecha.compute_tfr(method="multitaper", freqs=freqs, n_cycles=n_cycles, time_bandwidth=2.0, n_jobs=1, average=False)
+
+# tfr_izq = tfr_morlet(clase_izquierda, freqs=freqs, n_cycles=freqs/2., return_itc=False, average=False)
+# tfr_der = tfr_morlet(clase_derecha, freqs=freqs, n_cycles=freqs/2., return_itc=False, average=False)
 
 baseline_rest = parameters["baseline_rest"]  # Intervalo de tiempo para el baseline
 baseline_pretask = parameters["baseline_pretask"]  # Intervalo de tiempo para el baseline
@@ -90,14 +97,26 @@ baseline_postask = parameters["baseline_postask"]
 tfr_izq_base = tfr_izq.copy().apply_baseline(baseline_rest,mode="percent")
 tfr_der_base = tfr_der.copy().apply_baseline(baseline_rest,mode="percent")
 
-banda = parameters["banda_beta"] # Banda de frecuencias a filtrar (Hz)
+# tfr_der_avg = tfr_der.average().apply_baseline(baseline_rest,mode="percent")
+# tfr_izq_avg = tfr_izq.average().apply_baseline(baseline_rest,mode="percent")
+
+banda = parameters["banda_beta"]  # Banda de frecuencias a filtrar (Hz)
 #indices donde freqs sea mayor a 10 y menor a 12
 i_freqs = np.where((freqs >= banda[0]) & (freqs <= banda[1]))[0]
 
-tfr_i_filt_c3 = tfr_izq_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
-tfr_i_filt_c4 = tfr_izq_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
-tfr_d_filt_c3 = tfr_der_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
-tfr_d_filt_c4 = tfr_der_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
+
+tfr_i_filt_c3 = tfr_izq_base.data[:,:,i_freqs,:].mean(axis=2)[:,cluster_izq,:].mean(axis=1).mean(axis=0)
+tfr_i_filt_c4 = tfr_izq_base.data[:,:,i_freqs,:].mean(axis=2)[:,cluster_der,:].mean(axis=1).mean(axis=0)
+tfr_d_filt_c3 = tfr_der_base.data[:,:,i_freqs,:].mean(axis=2)[:,cluster_izq,:].mean(axis=1).mean(axis=0)
+tfr_d_filt_c4 = tfr_der_base.data[:,:,i_freqs,:].mean(axis=2)[:,cluster_der,:].mean(axis=1).mean(axis=0)
+
+# tfr_i_filt_c3 = tfr_izq_base.data[:,cluster_izq,:,:].mean((0,2,1))#[:,cluster_izq,:].mean(axis=1).mean(axis=0)
+# tfr_i_filt_c4 = tfr_izq_base.data[:,cluster_der,:,:].mean((0,2,1))#[:,cluster_der,:].mean(axis=1).mean(axis=0)
+# tfr_d_filt_c3 = tfr_der_base.data[:,cluster_izq,:,:].mean((0,2,1))#[:,cluster_izq,:].mean(axis=1).mean(axis=0)
+# tfr_d_filt_c4 = tfr_der_base.data[:,cluster_der,:,:].mean((0,2,1))#[:,cluster_der,:].mean(axis=1).mean(axis=0)
+
+title_izq = parameters["cluster_electrodos_izq"]
+title_der = parameters["cluster_electrodos_der"]
 
 window_size = 512
 tfr_d_filt_c4_smooth = np.convolve(tfr_d_filt_c4, np.ones(window_size)/window_size, mode='same')
@@ -112,8 +131,6 @@ fmin, fmax = banda
 ti, tf = -2, tmax
 times = tfr_izq.times
 i_times = np.where((times >= ti) & (times <= tf))[0]
-
-### *********** GRAFICAMOS LOS RESULTADOS **********
 fig, axes = plt.subplots(1, 4, figsize=(17, 6))
 axes[0].plot(times[i_times], tfr_i_filt_c3_smooth[i_times], label="IZQ", color=c_ei, linewidth=2)
 axes[0].plot(times[i_times], tfr_d_filt_c3_smooth[i_times], label="DER", color=c_ed, linewidth=2)
@@ -132,7 +149,7 @@ axes[0].axhline(0, color='grey', linestyle='--')
 axes[0].spines['top'].set_visible(False)
 axes[0].spines['right'].set_visible(False)
 axes[0].legend(loc="upper right") 
-axes[0].set_title("Cluster lado izquierdo")
+axes[0].set_title(title_izq)
 
 axes[3].plot(times[i_times], tfr_i_filt_c4_smooth[i_times], label="IZQ", color=c_ei, linewidth=2)
 axes[3].plot(times[i_times], tfr_d_filt_c4_smooth[i_times], label="DER", color=c_ed, linewidth=2)
@@ -153,7 +170,7 @@ axes[3].spines['top'].set_visible(False)
 axes[3].spines['left'].set_visible(False)
 axes[3].yaxis.tick_right()
 axes[3].legend(loc="upper right")
-axes[3].set_title("Cluster lado derecho")
+axes[3].set_title(title_der)
 
 tfr_izq.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin=0, tmax=1,fmin=fmin,fmax=fmax,
                                                                             colorbar=False,
@@ -166,9 +183,10 @@ tfr_der.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin
                                                                             axes=axes[2],contours=8,cbar_fmt="%.2f")
 axes[1].set_title("IZQUIERDA")
 axes[2].set_title("DERECHA")
+# plt.suptitle(f"${tipo_sesion}$ - {banda[0]}-{banda[1]}Hz",fontsize=18)
 plt.tight_layout()
 if save:
-    plt.savefig(os.path.join(root_path, f"timefreq{sujeto}_{tipo_sesion}_{banda}.png"), dpi=350)
+    plt.savefig(os.path.join(root_path, f"timefreq{sujeto}_{tipo_sesion}.png"), dpi=350)
 if show:
     plt.show()
 #elimino la figura
