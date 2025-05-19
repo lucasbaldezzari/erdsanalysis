@@ -1,4 +1,6 @@
 {
+    "sujeto": 8,
+    "sesion": 2,
     "electrodos": [
         "C3",
         "C4"
@@ -82,7 +84,7 @@
         -0.5
     ],
     "baseline_pretask": [
-        -1,
+        -0.5,
         0
     ],
     "baseline_task": [
@@ -100,5 +102,6 @@
     "colores_clases": [
         "#45b27b",
         "#e74c3c"
-    ]
+    ],
+    "confidence": 0.95
 }

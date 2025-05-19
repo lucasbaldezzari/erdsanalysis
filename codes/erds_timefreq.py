@@ -12,14 +12,14 @@ import json
 ##cargo codes\\parameters.json
 with open('codes\\parameters.json', 'r') as f:
     parameters = json.load(f)
-sujeto = 8
-sesion = 2
-sfreq = 512
 
+sujeto = parameters["sujeto"]
+sesion = parameters["sesion"]
 tipo_sesion = "Ejecutada" if sesion == 1 else "Imaginada"
-
-channels_to_drop = ["FP1","FP2","FPz","Fz","F8","F7","AF3","AF4","AF5","AF7","AF8","T7","T8","F9","F10"]
-pick = ["FC5","FC3","FC1","FCz","FC2","FC4","FC6","C5","C3","C1","Cz","C2","C4","C6","CP5","CP3","CP1","CPz","CP2","CP4","CP6",]
+sfreq = 512
+channels_to_drop = parameters["channels_to_drop"]
+pick = parameters["pick"]
+confidence = parameters["confidence"]
 
 eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=False).drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
 # eeg_concatenados.plot_sensors(kind="topomap",show_names=True) ##probar con kind="3d"

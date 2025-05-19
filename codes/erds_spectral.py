@@ -8,19 +8,17 @@ from scipy.stats import sem, t
 import json
 
 ## 1. ******* CARGAMOS Y CONCATENAMOS LOS DATOS PARA EL/LA SUJETO EN CUESTIÓN *******
+##cargo codes\\parameters.json
 with open('codes\\parameters.json', 'r') as f:
     parameters = json.load(f)
 
-sujeto = 8
-sesion = 2
-sfreq = 512
-
-confidence = 0.95 # Intervalo de confianza del 95%
-
+sujeto = parameters["sujeto"]
+sesion = parameters["sesion"]
 tipo_sesion = "Ejecutada" if sesion == 1 else "Imaginada"
-
+sfreq = 512
 channels_to_drop = parameters["channels_to_drop"]
 pick = parameters["pick"]
+confidence = parameters["confidence"]
 
 eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=False).drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
 
