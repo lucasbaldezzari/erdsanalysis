@@ -3,8 +3,8 @@
 import json
 
 parameters ={
-    "sujeto": 8,
-    "sesion": 2,
+    "sujeto": 4,
+    "sesion": 1,
     "electrodos": ["C3", "C4"],
     "cluster_electrodos_izq": ["C3", "CP3", "C1", "CP1","FC1","FC3"],
     "cluster_electrodos_der": ["C4", "CP4", "C2", "CP2","FC2","FC4"],
