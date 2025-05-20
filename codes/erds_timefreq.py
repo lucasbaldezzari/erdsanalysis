@@ -32,7 +32,7 @@ root_path = os.path.join("datasets", f"sujeto_{sujeto}","figures")
 if not os.path.exists(root_path):
     os.makedirs(root_path)
 
-eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=False).drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
+eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=True).drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
 cluster_izq = [eeg_concatenados.ch_names.index(ch) for ch in parameters["cluster_electrodos_izq"]]
 cluster_der = [eeg_concatenados.ch_names.index(ch) for ch in parameters["cluster_electrodos_der"]]
 
@@ -91,7 +91,7 @@ tfr_izq_base = tfr_izq.copy().apply_baseline(baseline_rest,mode="percent")
 tfr_der_base = tfr_der.copy().apply_baseline(baseline_rest,mode="percent")
 
 ## BANDA A ANALIZAR
-banda = parameters["banda_beta"] # Banda de frecuencias a filtrar (Hz)
+banda = parameters["banda_completa"] # Banda de frecuencias a filtrar (Hz)
 #indices donde freqs sea mayor a 10 y menor a 12
 i_freqs = np.where((freqs >= banda[0]) & (freqs <= banda[1]))[0]
 

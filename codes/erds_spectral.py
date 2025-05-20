@@ -28,7 +28,7 @@ root_path = os.path.join("datasets", f"sujeto_{sujeto}","figures")
 if not os.path.exists(root_path):
     os.makedirs(root_path)
 
-eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=False).drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
+eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=True).drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
 
 l_freq, h_freq = parameters["banda_completa"]
 eeg_concatenados.filter(l_freq=l_freq, h_freq=h_freq,
@@ -87,7 +87,7 @@ trials_der_rest = clase_derecha.copy().crop(tmin=baseline_rest[0], tmax=baseline
 trials_der_task = clase_derecha.copy().crop(tmin=baseline_task[0], tmax=baseline_task[1])
 trials_der_postask = clase_derecha.copy().crop(tmin=baseline_postask[0], tmax=baseline_postask[1])
 
-## Obtengo los PSD de cada segmento de interés
+## ------- Obtengo los PSD de cada segmento de interés  -------
 izq_rest_multi_orig = mne.time_frequency.tfr_array_multitaper(trials_izq_rest.get_data(), freqs=freqs,sfreq=sfreq,n_cycles=n_cycles, time_bandwidth=2.0,output="power",n_jobs=1)
 # izq_pretask_multi_orig = mne.time_frequency.tfr_array_multitaper(trials_iz_pretask.get_data(), freqs=freqs,sfreq=sfreq,n_cycles=n_cycles, time_bandwidth=2.0,output="power",n_jobs=1)
 izq_task_multi_orig = mne.time_frequency.tfr_array_multitaper(trials_izq_task.get_data(), freqs=freqs,sfreq=sfreq,n_cycles=n_cycles, time_bandwidth=2.0,output="power",n_jobs=1)
