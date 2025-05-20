@@ -90,6 +90,7 @@ baseline_postask = parameters["baseline_postask"]
 tfr_izq_base = tfr_izq.copy().apply_baseline(baseline_rest,mode="percent")
 tfr_der_base = tfr_der.copy().apply_baseline(baseline_rest,mode="percent")
 
+## BANDA A ANALIZAR
 banda = parameters["banda_beta"] # Banda de frecuencias a filtrar (Hz)
 #indices donde freqs sea mayor a 10 y menor a 12
 i_freqs = np.where((freqs >= banda[0]) & (freqs <= banda[1]))[0]
@@ -99,11 +100,21 @@ tfr_i_filt_c4 = tfr_izq_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0
 tfr_d_filt_c3 = tfr_der_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
 tfr_d_filt_c4 = tfr_der_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
 
+tfr_i_filt_c3_std = tfr_izq_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
+tfr_i_filt_c4_std = tfr_izq_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
+tfr_d_filt_c3_std = tfr_der_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
+tfr_d_filt_c4_std = tfr_der_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
+
 window_size = 512
 tfr_d_filt_c4_smooth = np.convolve(tfr_d_filt_c4, np.ones(window_size)/window_size, mode='same')
 tfr_d_filt_c3_smooth = np.convolve(tfr_d_filt_c3, np.ones(window_size)/window_size, mode='same')
 tfr_i_filt_c4_smooth = np.convolve(tfr_i_filt_c4, np.ones(window_size)/window_size, mode='same')
 tfr_i_filt_c3_smooth = np.convolve(tfr_i_filt_c3, np.ones(window_size)/window_size, mode='same')
+
+tfr_i_filt_c3_std_smooth = np.convolve(tfr_i_filt_c3_std, np.ones(window_size)/window_size, mode='same')
+tfr_i_filt_c4_std_smooth = np.convolve(tfr_i_filt_c4_std, np.ones(window_size)/window_size, mode='same')
+tfr_d_filt_c3_std_smooth = np.convolve(tfr_d_filt_c3_std, np.ones(window_size)/window_size, mode='same')
+tfr_d_filt_c4_std_smooth = np.convolve(tfr_d_filt_c4_std, np.ones(window_size)/window_size, mode='same')
 
 ## ********** GRAFICAMOS LOS RESULTADOS **********
 c_ei, c_ed = parameters["colores_clases"] #colores para electrodos izquierdo y derecho
@@ -116,15 +127,29 @@ i_times = np.where((times >= ti) & (times <= tf))[0]
 ### *********** GRAFICAMOS LOS RESULTADOS **********
 fig, axes = plt.subplots(1, 4, figsize=(17, 6))
 axes[0].plot(times[i_times], tfr_i_filt_c3_smooth[i_times], label="IZQ", color=c_ei, linewidth=2)
+axes[0].fill_between(
+    times[i_times],
+    tfr_i_filt_c3_smooth[i_times] - tfr_i_filt_c3_std_smooth[i_times],
+    tfr_i_filt_c3_smooth[i_times] + tfr_i_filt_c3_std_smooth[i_times],
+    color=c_ei,
+    alpha=0.1,)
 axes[0].plot(times[i_times], tfr_d_filt_c3_smooth[i_times], label="DER", color=c_ed, linewidth=2)
+axes[0].fill_between(
+    times[i_times],
+    tfr_d_filt_c3_smooth[i_times] - tfr_d_filt_c3_std_smooth[i_times],
+    tfr_d_filt_c3_smooth[i_times] + tfr_d_filt_c3_std_smooth[i_times],
+    color=c_ed,
+    alpha=0.1,)
 axes[0].set_xlabel('Tiempo (s)')
-axes[0].set_ylabel('Potencia (%)')
+axes[0].set_ylabel('Cambio potencia (%)')
 #agrego una sombra entre los tiempos -0.5 y 0
-ymin = min(tfr_d_filt_c3_smooth[i_times].min(), tfr_i_filt_c3_smooth[i_times].min())
-ymax = max(tfr_d_filt_c3_smooth[i_times].max(), tfr_i_filt_c3_smooth[i_times].max())
-offset = 0
-axes[0].fill_between(times, ymin-offset, ymax+offset, where=(times >= -0.5) & (times <= 0), color='grey', alpha=0.2)
-axes[0].fill_between(times, ymin-offset, ymax+offset, where=(times >= 0) & (times<= 2), color='#725ba0', alpha=0.2)
+ymin = min((tfr_d_filt_c3_smooth[i_times]-tfr_d_filt_c3_std_smooth[i_times]).min(),
+           (tfr_i_filt_c3_smooth[i_times]-tfr_i_filt_c3_std_smooth[i_times]).min())
+ymax = max((tfr_d_filt_c3_smooth[i_times]+tfr_d_filt_c3_std_smooth[i_times]).max(),
+           (tfr_i_filt_c3_smooth[i_times]+tfr_i_filt_c3_std_smooth[i_times]).max())
+
+axes[0].fill_between(times, ymin, ymax, where=(times >= -0.5) & (times <= 0), color='#725ba0', alpha=0.1)
+axes[0].fill_between(times, ymin, ymax, where=(times >= 0) & (times<= 2), color='grey', alpha=0.1)
 axes[0].axvline(0, color='k', linestyle='-', label='Cue')
 axes[0].axvline(-0.5, color='grey', linestyle='--')
 axes[0].axvline(2, color='grey', linestyle='--')
@@ -135,16 +160,31 @@ axes[0].legend(loc="upper right")
 axes[0].set_title("Cluster lado izquierdo")
 
 axes[3].plot(times[i_times], tfr_i_filt_c4_smooth[i_times], label="IZQ", color=c_ei, linewidth=2)
+axes[3].fill_between(
+    times[i_times],
+    tfr_i_filt_c4_smooth[i_times] - tfr_i_filt_c4_std_smooth[i_times],
+    tfr_i_filt_c4_smooth[i_times] + tfr_i_filt_c4_std_smooth[i_times],
+    color=c_ei,
+    alpha=0.1,)
 axes[3].plot(times[i_times], tfr_d_filt_c4_smooth[i_times], label="DER", color=c_ed, linewidth=2)
+axes[3].fill_between(
+    times[i_times],
+    tfr_d_filt_c4_smooth[i_times] - tfr_d_filt_c4_std_smooth[i_times],
+    tfr_d_filt_c4_smooth[i_times] + tfr_d_filt_c4_std_smooth[i_times],
+    color=c_ed,
+    alpha=0.1,)
 axes[3].set_xlabel('Tiempo (s)')
-axes[3].set_ylabel('Potencia (%)')
-# axes[3].set_ylabel("Potencia (%)", labelpad=10) 
+axes[3].set_ylabel('Cambio potencia (%)')
 #agrego una sombra entre los tiempos -0.5 y 0
 axes[3].yaxis.set_label_position("right")
-ymin = min(tfr_d_filt_c4_smooth[i_times].min(), tfr_i_filt_c4_smooth[i_times].min())
-ymax = max(tfr_d_filt_c4_smooth[i_times].max(), tfr_i_filt_c4_smooth[i_times].max())
-axes[3].fill_between(times, ymin-offset, ymax+offset, where=(times >= -0.5) & (times <= 0), color='grey', alpha=0.2)
-axes[3].fill_between(times, ymin-offset, ymax+offset, where=(times >= 0) & (times <= 2), color='#725ba0', alpha=0.2)
+
+ymin = min((tfr_d_filt_c4_smooth[i_times] - tfr_d_filt_c4_std_smooth[i_times]).min(),
+           (tfr_i_filt_c4_smooth[i_times] - tfr_i_filt_c4_std_smooth[i_times]).min())
+ymax = max((tfr_d_filt_c4_smooth[i_times] + tfr_d_filt_c4_std_smooth[i_times]).max(),
+           (tfr_i_filt_c4_smooth[i_times] + tfr_i_filt_c4_std_smooth[i_times]).max())
+
+axes[3].fill_between(times, ymin, ymax, where=(times >= -0.5) & (times <= 0), color='#725ba0', alpha=0.1)
+axes[3].fill_between(times, ymin, ymax, where=(times >= 0) & (times <= 2), color='grey', alpha=0.1)
 axes[3].axvline(0, color='k', linestyle='-', label='Cue')
 axes[3].axvline(-0.5, color='grey', linestyle='--')
 axes[3].axvline(2, color='grey', linestyle='--')
@@ -156,12 +196,12 @@ axes[3].legend(loc="upper right")
 axes[3].set_title("Cluster lado derecho")
 
 tfr_izq.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin=0, tmax=1,fmin=fmin,fmax=fmax,
-                                                                            colorbar=False,
+                                                                            colorbar=True,
                                                                             cmap=cmap,
                                                                             show=False,
                                                                             axes=axes[1],contours=8,cbar_fmt="%.2f")
 tfr_der.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin=0, tmax=1,fmin=fmin,fmax=fmax,
-                                                                            colorbar=False,
+                                                                            colorbar=True,
                                                                             cmap=cmap,show=False,
                                                                             axes=axes[2],contours=8,cbar_fmt="%.2f")
 axes[1].set_title("IZQUIERDA")

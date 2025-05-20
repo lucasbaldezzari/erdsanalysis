@@ -23,8 +23,8 @@ parameters ={
     "mean_trials": True,
     "apply_smooth": True,
     "amplitude_rejection": 80, ##en microvolts
-    "cmap_topomaps": "RdBu_r",
-    "colores_clases": ["#45b27b", "#e74c3c"], #IZQUIERDA, DERECHA
+    "cmap_topomaps": "PRGn",
+    "colores_clases": ["#45b27b", "#5b0672"], #IZQUIERDA, DERECHA
     "confidence": 0.95,
     "show_figures": True,
     "save_figures": True,

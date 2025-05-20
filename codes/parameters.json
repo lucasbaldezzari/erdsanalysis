@@ -98,10 +98,10 @@
     "mean_trials": true,
     "apply_smooth": true,
     "amplitude_rejection": 80,
-    "cmap_topomaps": "RdBu_r",
+    "cmap_topomaps": "PRGn",
     "colores_clases": [
         "#45b27b",
-        "#e74c3c"
+        "#5b0672"
     ],
     "confidence": 0.95,
     "show_figures": true,

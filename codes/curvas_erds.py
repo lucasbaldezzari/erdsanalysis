@@ -30,7 +30,8 @@ if not os.path.exists(root_path):
 
 eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=False).drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
 
-l_freq, h_freq = parameters["banda_completa"]
+banda = parameters["banda_mu"]
+l_freq, h_freq = banda
 eeg_concatenados.filter(l_freq=l_freq, h_freq=h_freq,
            picks="eeg", 
            method="fir", 
@@ -82,29 +83,57 @@ erds_der = getHilbertERDS(clase_derecha, baseline, apply_smooth=True, window_smo
 
 c_ei, c_ed = parameters["colores_clases"] #colores para electrodos izquierdo y derecho
 cmap = parameters["cmap_topomaps"]
-sombra_cue = "#fdf88c"
+sombra_fadein = "#fdf88c"
 times = clase_izquierda.times
 ti, tf = -1.6, tmax
 idx = np.where((times >= ti) & (times <= tf))[0]
 i_times = np.where((times >= ti) & (times <= tf))[0]
 fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 axes[0].plot(times[idx], erds_izq[cluster_izq].mean(0)[idx], label="IZQUIERDA", color=c_ei, linewidth=2)
+axes[0].fill_between(
+    times[idx],
+    erds_izq[cluster_izq].mean(0)[idx] - erds_izq[cluster_izq].std(0)[idx],
+    erds_izq[cluster_izq].mean(0)[idx] + erds_izq[cluster_izq].std(0)[idx],
+    color=c_ei,
+    alpha=0.3,)
 axes[0].plot(times[idx], erds_der[cluster_izq].mean(0)[idx], label="DERECHA", color=c_ed, linewidth=2)
+axes[0].fill_between(
+    times[idx],
+    erds_der[cluster_izq].mean(0)[idx] - erds_der[cluster_izq].std(0)[idx],
+    erds_der[cluster_izq].mean(0)[idx] + erds_der[cluster_izq].std(0)[idx],
+    color=c_ed,
+    alpha=0.3,)
 axes[0].axvline(0, color="k", linestyle="--", label="Cue onset")
 axes[0].axhline(0, color="grey", linestyle="--")
 axes[0].spines['top'].set_visible(False)
 axes[0].spines['right'].set_visible(False)
 axes[0].set_xlabel("Tiempo (s)")
-axes[0].set_ylabel(r"ERDS (%) $\mu V$")
+axes[0].set_ylabel(r"Cambio voltaje (%)")
 axes[0].set_title(f"EDRS% Cluster Izq - ({l_freq}-{h_freq})Hz - Sesión {tipo_sesion}", fontsize=14)
-ymin = min(erds_izq[cluster_izq].mean(0)[idx].min(), erds_der[cluster_izq].mean(0)[idx].min())
-ymax = max(erds_izq[cluster_izq].mean(0)[idx].max(), erds_der[cluster_izq].mean(0)[idx].max())
-axes[0].fill_between(times, ymin, ymax, where=(times >= -0.5) & (times <= 0), color='grey', alpha=0.2)
-axes[0].fill_between(times, ymin, ymax, where=(times >= 0) & (times<= 2), color=sombra_cue, alpha=0.2, label="Tarea")
+std_izq = erds_izq[cluster_izq].std(0)[idx]
+std_der = erds_der[cluster_izq].std(0)[idx]
+mean_izq = erds_izq[cluster_izq].mean(0)[idx]
+mean_der = erds_der[cluster_izq].mean(0)[idx]
+ymin = min(mean_izq.min() - std_izq.min(), mean_der.min() - std_der.min())
+ymax = max(mean_izq.max() + std_izq.max(), mean_der.max() + std_der.max())
+axes[0].fill_between(times, ymin, ymax, where=(times >= -0.5) & (times <= 0), color=sombra_fadein, alpha=0.2, label = "fade-in")
+axes[0].fill_between(times, ymin, ymax, where=(times >= 0) & (times<= 2), color="grey", alpha=0.2, label="Tarea")
 axes[0].legend(loc="lower right")
 
 axes[1].plot(times[idx], erds_izq[cluster_der].mean(0)[idx], label="IZQUIERDA", color=c_ei, linewidth=2)
+axes[1].fill_between(
+    times[idx],
+    erds_izq[cluster_der].mean(0)[idx] - erds_izq[cluster_der].std(0)[idx],
+    erds_izq[cluster_der].mean(0)[idx] + erds_izq[cluster_der].std(0)[idx],
+    color=c_ei,
+    alpha=0.3,)
 axes[1].plot(times[idx], erds_der[cluster_der].mean(0)[idx], label="DERECHA", color=c_ed, linewidth=2)
+axes[1].fill_between(
+    times[idx],
+    erds_der[cluster_der].mean(0)[idx] - erds_der[cluster_der].std(0)[idx],
+    erds_der[cluster_der].mean(0)[idx] + erds_der[cluster_der].std(0)[idx],
+    color=c_ed,
+    alpha=0.3,)
 axes[1].axvline(0, color="k", linestyle="--", label="Cue onset")
 axes[1].axhline(0, color="grey", linestyle="--")
 axes[1].spines['top'].set_visible(False)
@@ -112,15 +141,21 @@ axes[1].spines['left'].set_visible(False)
 axes[1].yaxis.tick_right()
 axes[1].yaxis.set_label_position("right")
 axes[1].set_xlabel("Tiempo (s)")
-axes[1].set_ylabel(r"ERDS (%) $\mu V$")
+axes[1].set_ylabel(r"Cambio voltaje (%)")
 axes[1].set_title(f"EDRS% Cluster DER - ({l_freq}-{h_freq})Hz - Sesión {tipo_sesion}", fontsize=14)
-ymin = min(erds_izq[cluster_der].mean(0)[idx].min(), erds_der[cluster_der].mean(0)[idx].min())
-ymax = max(erds_izq[cluster_der].mean(0)[idx].max(), erds_der[cluster_der].mean(0)[idx].max())
-axes[1].fill_between(times, ymin, ymax, where=(times >= -0.5) & (times <= 0), color='grey', alpha=0.2)
-axes[1].fill_between(times, ymin, ymax, where=(times >= 0) & (times<= 2), color=sombra_cue, alpha=0.2, label="Tarea")
+# ymin = min(erds_izq[cluster_der].mean(0)[idx].min(), erds_der[cluster_der].mean(0)[idx].min())
+# ymax = max(erds_izq[cluster_der].mean(0)[idx].max(), erds_der[cluster_der].mean(0)[idx].max())
+std_izq = erds_izq[cluster_der].std(0)[idx]
+std_der = erds_der[cluster_der].std(0)[idx]
+mean_izq = erds_izq[cluster_der].mean(0)[idx]
+mean_der = erds_der[cluster_der].mean(0)[idx]
+ymin = min(mean_izq.min() - std_izq.min(), mean_der.min() - std_der.min())
+ymax = max(mean_izq.max() + std_izq.max(), mean_der.max() + std_der.max())
+axes[1].fill_between(times, ymin, ymax, where=(times >= -0.5) & (times <= 0), color=sombra_fadein, alpha=0.2, label = "fade-in")
+axes[1].fill_between(times, ymin, ymax, where=(times >= 0) & (times<= 2), color="gray", alpha=0.2, label="Tarea")
 axes[1].legend(loc="lower right")
 if save:
-    plt.savefig(os.path.join(root_path, f"erds_voltaje_{sujeto}_{tipo_sesion}.png"), dpi=350)
+    plt.savefig(os.path.join(root_path, f"erds_voltaje_{sujeto}_{tipo_sesion}_{banda}.png"), dpi=350)
 if show:
     plt.show()
 plt.close(fig)

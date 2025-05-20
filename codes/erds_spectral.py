@@ -1,7 +1,7 @@
 import mne
 import numpy as np
 import matplotlib.pyplot as plt
-from codes.utils import concatenateEEGs
+from codes.utils import concatenateEEGs, getIntervalos
 from scipy.stats import sem, t
 import json
 import os
@@ -87,6 +87,7 @@ trials_der_rest = clase_derecha.copy().crop(tmin=baseline_rest[0], tmax=baseline
 trials_der_task = clase_derecha.copy().crop(tmin=baseline_task[0], tmax=baseline_task[1])
 trials_der_postask = clase_derecha.copy().crop(tmin=baseline_postask[0], tmax=baseline_postask[1])
 
+## Obtengo los PSD de cada segmento de interés
 izq_rest_multi_orig = mne.time_frequency.tfr_array_multitaper(trials_izq_rest.get_data(), freqs=freqs,sfreq=sfreq,n_cycles=n_cycles, time_bandwidth=2.0,output="power",n_jobs=1)
 # izq_pretask_multi_orig = mne.time_frequency.tfr_array_multitaper(trials_iz_pretask.get_data(), freqs=freqs,sfreq=sfreq,n_cycles=n_cycles, time_bandwidth=2.0,output="power",n_jobs=1)
 izq_task_multi_orig = mne.time_frequency.tfr_array_multitaper(trials_izq_task.get_data(), freqs=freqs,sfreq=sfreq,n_cycles=n_cycles, time_bandwidth=2.0,output="power",n_jobs=1)
@@ -160,31 +161,11 @@ global_mean_diff_pr_der = diff_tr_der_postask_avg.mean()
 sem_diff_pr_der_avg = sem(diff_tr_der_postask_avg, axis=0)
 confinter_pr_der = sem_diff_pr_der_avg * t.ppf((1 + confidence) / 2, df=n_der_trials - 1)
 
-def getIntervalos(freqs, paso):
-    """
-    Función para obtener una lista de lista de intervalos a partir de una de intervalos y un paso.
-    Se toman los intervalos y cuando el siguiente intervalo supera el paso, se crea un nuevo intervalo.
-    """
-    lista_intervalos = []
-    if len(freqs) > 0:
-        intervalo_actual = [float(np.round(freqs[0],1))]
-        for i in range(1, len(freqs)):
-            if freqs[i] - intervalo_actual[-1] > paso:
-                lista_intervalos.append(intervalo_actual)
-                intervalo_actual = [float(np.round(freqs[i],1))] # reiniciamos el intervalo actual
-            else:
-                intervalo_actual.append(float(np.round(freqs[i],1)))
-        lista_intervalos.append(intervalo_actual) # añadimos el último intervalo
-        ##ordeno de menor a mayor cada intervalo
-        for i in range(len(lista_intervalos)):
-            lista_intervalos[i] = sorted(lista_intervalos[i])
-    return lista_intervalos
-
 ##vamos a intentar replicar la gráfica 45.2 del lado izquierdo y arriba de del artículo 
 ##https://neupsykey.com/eeg-event-related-desynchronization-erd-and-event-related-synchronization-ers/#R1-45
 
 crest, ctask, cposttask = "#000000", "#f7525f", "#006b3c"
-cdiff = "#4f7899"
+cdiff = "#5b0672"
 figsize=(8, 10)
 title_fontsize=14
 label_fs=14

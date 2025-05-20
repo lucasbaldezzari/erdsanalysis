@@ -520,3 +520,23 @@ class EnvolventeEEG:
                 self.data_envelope._data = 20 * np.log10(np.abs(self.data_envelope._data))
 
             return self.data_envelope
+        
+def getIntervalos(freqs, paso):
+    """
+    Función para obtener una lista de lista de intervalos a partir de una de intervalos y un paso.
+    Se toman los intervalos y cuando el siguiente intervalo supera el paso, se crea un nuevo intervalo.
+    """
+    lista_intervalos = []
+    if len(freqs) > 0:
+        intervalo_actual = [float(np.round(freqs[0],1))]
+        for i in range(1, len(freqs)):
+            if freqs[i] - intervalo_actual[-1] > paso:
+                lista_intervalos.append(intervalo_actual)
+                intervalo_actual = [float(np.round(freqs[i],1))] # reiniciamos el intervalo actual
+            else:
+                intervalo_actual.append(float(np.round(freqs[i],1)))
+        lista_intervalos.append(intervalo_actual) # añadimos el último intervalo
+        ##ordeno de menor a mayor cada intervalo
+        for i in range(len(lista_intervalos)):
+            lista_intervalos[i] = sorted(lista_intervalos[i])
+    return lista_intervalos
