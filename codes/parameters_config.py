@@ -1,0 +1,35 @@
+#Archivo para guardar el diccionario de configuracion y características de procesamiento y análisis
+#en un archivo json
+import json
+
+parameters ={
+    "sujeto": 8,
+    "sesion": 2,
+    "electrodos": ["C3", "C4"],
+    "cluster_electrodos_izq": ["C3", "CP3", "C1", "CP1","FC1","FC3"],
+    "cluster_electrodos_der": ["C4", "CP4", "C2", "CP2","FC2","FC4"],
+    "channels_to_drop" : ["FP1","FP2","FPz","Fz","F8","F7","AF3","AF4","AF5","AF7","AF8","T7","T8","F9","F10"],
+    "pick" : ["FC5","FC3","FC1","FCz","FC2","FC4","FC6","C5","C3","C1","Cz","C2","C4","C6","CP5","CP3","CP1","CPz","CP2","CP4","CP6",],
+    "duracion_trial": [-3, 4],
+    "banda_completa": [7, 32],
+    "banda_mu": [8, 13],
+    "banda_beta": [13, 28],
+    "window_size": 512,
+    "smoothing_window": 51,
+    "baseline_rest": (-2, -1),
+    "baseline_pretask": (-0.5, 0),  # Intervalo de tiempo para el baseline
+    "baseline_task": (0, 1),
+    "baseline_postask": (2, 3),
+    "mean_trials": True,
+    "apply_smooth": True,
+    "amplitude_rejection": 80, ##en microvolts
+    "cmap_topomaps": "PRGn",
+    "colores_clases": ["#45b27b", "#5b0672"], #IZQUIERDA, DERECHA
+    "confidence": 0.95,
+    "show_figures": True,
+    "save_figures": True,
+}
+
+##guaradamos
+with open('codes\\parameters.json', 'w') as f:
+    json.dump(parameters, f, indent=4)
