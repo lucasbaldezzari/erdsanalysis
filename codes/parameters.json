@@ -1,6 +1,6 @@
 {
-    "sujeto": 8,
-    "sesion": 2,
+    "sujeto": 9,
+    "sesion": 1,
     "electrodos": [
         "C3",
         "C4"
@@ -105,5 +105,5 @@
     ],
     "confidence": 0.95,
     "show_figures": true,
-    "save_figures": true
+    "save_figures": false
 }

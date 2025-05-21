@@ -126,7 +126,7 @@ def concatenateEEGs(n_sujeto, sesion, rootpath = "datasets\\",montage_file = "co
                             event_times=events_time_ghiamp, event_labels=clases)
 
         ##corto la señal en events_time_ghiamp[0] -3 segundos
-        eeg_data.crop(events_time_ghiamp[0]-3)
+        eeg_data.crop(events_time_ghiamp[0]-2,events_time_ghiamp[-1]+5)
 
         ## ************************ CARGAMOS ICA ENTRENADO Y EL ARCHIVO CSV CON INFORMACIÓN DE PREPROCESAMIENTO ************************
         root_path = f"datasets\\{sujeto}"
