@@ -138,10 +138,10 @@ def concatenateEEGs(n_sujeto, sesion, rootpath = "datasets\\",montage_file = "co
             ica_file = f"datasets\\{sujeto}ICA_{eeg_file.split(".")[0]}.fif"
             ##cargamos el archivo ICA
             ica = read_ica(ica_file)
-            ica.exclude = [int(comp) for comp in ica.exclude] ##ICA ya tiene almanecados los componentes a eliminar
+            # ica.exclude = [int(comp) for comp in ica.exclude] ##ICA ya tiene almanecados los componentes a eliminar
             ##descartamos canales en eeg_data
             # eeg_data.drop_channels(bad_channels)
-
+            print(f"Se eliminaron los componentes {ica.exclude} del ICA. Total de componentes eliminados: {len(ica.exclude)}")
             ###Aplicamos ICA a la señal
             
             eeg_data = ica.apply(eeg_data)
