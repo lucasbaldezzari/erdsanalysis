@@ -2,13 +2,13 @@
 
 ## Pre-rocesamiento 
 
-El archivo [cleaningData.py](https://github.com/lucasbaldezzari/erdsanalysis/blob/main/codes/cleaningData.py) describe paso a paso cómo realizar el análisis y la limpieza de datos EEG utilizando técnicas de procesamiento de señales utilizando Python y la librería MNE, centrándose especialmente en la eliminación de artefactos usando ICA. Los pasos que se realizan dentro del script se describen en docs/ica_readme.md-
+El archivo [cleaningData.py](https://github.com/lucasbaldezzari/erdsanalysis/blob/main/codes/cleaningData.py) describe paso a paso cómo realizar el análisis y la limpieza de datos EEG utilizando técnicas de procesamiento de señales utilizando Python y la librería MNE, centrándose especialmente en la eliminación de artefactos usando ICA. Los pasos que se realizan dentro del script se describen en [docs/ica_readme.md](https://github.com/lucasbaldezzari/erdsanalysis/blob/main/docs/ica_readme.md).
 
 ## Obteniendo información
 
 ### Análisis de ERDS usando Hilbert
 
-El script [curvas_erds](https://github.com/lucasbaldezzari/erdsanalysis/blob/main/codes/curvas_erds.py) contiene código para el procesamiento y obtención de curvas $ERDS{\%}$.
+El script [curvas_erds](https://github.com/lucasbaldezzari/erdsanalysis/blob/main/codes/curvas_erds.py) contiene código para el procesamiento y obtención de curvas _ERDS%_.
 
 ### Análisis de ERD y ERS en tiempo frecuencia
 
