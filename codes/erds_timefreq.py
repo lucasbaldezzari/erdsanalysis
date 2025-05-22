@@ -24,8 +24,8 @@ confidence = parameters["confidence"]
 
 
 ##para mostrar y guardar gráficos
-show = True
-save = True
+show = parameters["show_figures"]
+save = parameters["save_figures"]
 
 ## folder a donde guardar los gráficos
 root_path = os.path.join("datasets", f"sujeto_{sujeto}","figures")
@@ -91,7 +91,7 @@ tfr_izq_base = tfr_izq.copy().apply_baseline(baseline_rest,mode="percent")
 tfr_der_base = tfr_der.copy().apply_baseline(baseline_rest,mode="percent")
 
 ## BANDA A ANALIZAR
-banda = parameters["banda_completa"] # Banda de frecuencias a filtrar (Hz)
+banda = parameters["banda_mu"] # Banda de frecuencias a filtrar (Hz)
 #indices donde freqs sea mayor a 10 y menor a 12
 i_freqs = np.where((freqs >= banda[0]) & (freqs <= banda[1]))[0]
 
@@ -120,7 +120,7 @@ tfr_d_filt_c4_std_smooth = np.convolve(tfr_d_filt_c4_std, np.ones(window_size)/w
 c_ei, c_ed = parameters["colores_clases"] #colores para electrodos izquierdo y derecho
 cmap = parameters["cmap_topomaps"]
 fmin, fmax = banda
-ti, tf = -2, tmax
+ti, tf = -3, tmax
 times = tfr_izq.times
 i_times = np.where((times >= ti) & (times <= tf))[0]
 
@@ -207,6 +207,7 @@ tfr_der.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin
 axes[1].set_title("IZQUIERDA")
 axes[2].set_title("DERECHA")
 plt.tight_layout()
+fig.canvas.manager.set_window_title(f"Análisis de tiempo frecuencia - Banda {banda[0]}-{banda[1]}Hz - {tipo_sesion} - Sujeto {sujeto}")
 if save:
     plt.savefig(os.path.join(root_path, f"timefreq{sujeto}_{tipo_sesion}_{banda}.png"), dpi=350)
 if show:

@@ -80,8 +80,8 @@
     "window_size": 512,
     "smoothing_window": 51,
     "baseline_rest": [
-        -2,
-        -1
+        -2.5,
+        -0.5
     ],
     "baseline_pretask": [
         -0.5,
@@ -89,11 +89,11 @@
     ],
     "baseline_task": [
         0,
-        1
+        2
     ],
     "baseline_postask": [
         2,
-        3
+        4
     ],
     "mean_trials": true,
     "apply_smooth": true,

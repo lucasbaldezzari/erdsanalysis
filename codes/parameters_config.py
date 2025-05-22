@@ -16,10 +16,10 @@ parameters ={
     "banda_beta": [13, 28],
     "window_size": 512,
     "smoothing_window": 51,
-    "baseline_rest": (-2, -1),
+    "baseline_rest": (-2.5, -0.5),
     "baseline_pretask": (-0.5, 0),  # Intervalo de tiempo para el baseline
-    "baseline_task": (0, 1),
-    "baseline_postask": (2, 3),
+    "baseline_task": (0, 2),
+    "baseline_postask": (2, 4),
     "mean_trials": True,
     "apply_smooth": True,
     "amplitude_rejection": 80, ##en microvolts
