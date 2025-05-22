@@ -88,8 +88,36 @@ def applyLaplaciano(raw, center_channel, neighbor_channels, new_channel_name=Non
 
     return raw_laplacian
 
-def concatenateEEGs(n_sujeto, sesion, rootpath = "datasets\\",montage_file = "codes\\ghiamp_montage.sfp",
-                    sfreq=512, channels_to_remove = ["A1","A2"], apply_ica=True):
+def concatenateEEGs(n_sujeto, sesion, runs, rootpath = "datasets\\",montage_file = "codes\\ghiamp_montage.sfp",
+                    sfreq=512, channels_to_remove = ["A1","A2"], apply_ica=True, tpre_init=5, tpost=5):
+    """
+    Función para cargar y concatenar los datos EEG de un sujeto específico.
+    Parameters
+    ----------
+    n_sujeto : int
+        Número del sujeto a cargar.
+    sesion : int
+        Número de la sesión (1 o 2).
+    runs : list of int
+        Lista de números de run a cargar.
+    rootpath : str, optional
+        Ruta raíz donde se encuentran los archivos de datos (default es "datasets\\").
+    montage_file : str, optional
+        Ruta al archivo de montaje (default es "codes\\ghiamp_montage.sfp").
+    sfreq : int, optional
+        Frecuencia de muestreo (default es 512).
+    channels_to_remove : list of str, optional
+        Lista de nombres de canales a eliminar (default es ["A1","A2"]).
+    apply_ica : bool, optional
+        Si es True, se aplicará ICA a los datos (default es True).
+    tpre_init : int, optional
+        Tiempo de pre-inicialización en segundos (default es 5). Se toma desde el primer evento marcado por ghiamp, es decir,
+        el inicio del run.
+    tpost : int, optional
+        Tiempo a tomar desde que finaliza el último inicio de cue dentro de los datos (default es 5).
+    Returns
+
+    """
 
     ##cargamos los nombres de los electrodos del g.HIAMP
     montage_df = pd.read_csv(montage_file,sep="\t",header=None)
@@ -104,8 +132,8 @@ def concatenateEEGs(n_sujeto, sesion, rootpath = "datasets\\",montage_file = "co
     sujeto = f"sujeto_{n_sujeto}\\"
     tarea = "ejec" if sesion == 1 else "imag" ##tarea ejecutada o imaginada
 
-    for i in range(0,2):
-        run = i+1#1 ##NÚMERO DE RUN 1 o 2
+    for i, run in enumerate(runs):
+        # run = i+1#1 ##NÚMERO DE RUN 1 o 2
         eeg_file = f"sujeto{n_sujeto}_{tarea}_{run}.hdf5"
         event_file = f"eventos_{tarea}_{run}.txt"
 
@@ -126,7 +154,7 @@ def concatenateEEGs(n_sujeto, sesion, rootpath = "datasets\\",montage_file = "co
                             event_times=events_time_ghiamp, event_labels=clases)
 
         ##corto la señal en events_time_ghiamp[0] -3 segundos
-        eeg_data.crop(events_time_ghiamp[0]-2,events_time_ghiamp[-1]+5)
+        eeg_data.crop(events_time_ghiamp[0]-tpre_init,events_time_ghiamp[-1]+tpost)
 
         ## ************************ CARGAMOS ICA ENTRENADO Y EL ARCHIVO CSV CON INFORMACIÓN DE PREPROCESAMIENTO ************************
         root_path = f"datasets\\{sujeto}"

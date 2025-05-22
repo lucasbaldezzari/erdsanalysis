@@ -27,7 +27,7 @@ parameters ={
     "colores_clases": ["#45b27b", "#5b0672"], #IZQUIERDA, DERECHA
     "confidence": 0.95,
     "show_figures": True,
-    "save_figures": True,
+    "save_figures": False,
 }
 
 ##guaradamos

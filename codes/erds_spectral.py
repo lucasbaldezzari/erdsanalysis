@@ -28,7 +28,7 @@ root_path = os.path.join("datasets", f"sujeto_{sujeto}","figures")
 if not os.path.exists(root_path):
     os.makedirs(root_path)
 
-eeg_concatenados = concatenateEEGs(sujeto, sesion, apply_ica=True).drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
+eeg_concatenados = concatenateEEGs(sujeto, sesion, runs=[1,2]).drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
 
 l_freq, h_freq = parameters["banda_completa"]
 eeg_concatenados.filter(l_freq=l_freq, h_freq=h_freq,

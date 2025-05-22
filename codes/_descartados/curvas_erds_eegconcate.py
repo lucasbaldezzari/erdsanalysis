@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from codes.utils import concatenateEEGs, getHilbertERDS
 from codes.utils import Baseline
 import json
+from mne.preprocessing import read_ica
 import os
 
 ## 1. ******* CARGAMOS Y CONCATENAMOS LOS DATOS PARA EL/LA SUJETO EN CUESTIÓN *******
@@ -28,7 +29,12 @@ root_path = os.path.join("datasets", f"sujeto_{sujeto}","figures")
 if not os.path.exists(root_path):
     os.makedirs(root_path)
 
-eeg_concatenados = concatenateEEGs(sujeto, sesion, runs=[1,2]).drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
+eeg_concatenados = concatenateEEGs(sujeto, sesion, runs=[1,2], apply_ica=False)#.drop_channels(channels_to_drop, "ignore")#.pick(pick,"ignore")
+
+##cargo ICA
+ica_file = f"datasets\\sujeto_{sujeto}\\ICA_sujeto{sujeto}_{tipo_sesion}_EEGConcatenados.fif"
+ica = read_ica(ica_file)
+# eeg_concatenados = ica.apply(eeg_concatenados, exclude=ica.exclude)
 
 banda = parameters["banda_mu"]
 l_freq, h_freq = banda
@@ -38,6 +44,7 @@ eeg_concatenados.filter(l_freq=l_freq, h_freq=h_freq,
            phase="zero-double", 
            fir_window="hamming",
            filter_length="auto")
+
 ## 2. ************************ SEPARANDO EN ÉPOCAS ************************
 
 ##epOching de eeg_concatenados
