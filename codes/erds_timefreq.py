@@ -91,126 +91,127 @@ tfr_izq_base = tfr_izq.copy().apply_baseline(baseline_rest,mode="percent")
 tfr_der_base = tfr_der.copy().apply_baseline(baseline_rest,mode="percent")
 
 ## BANDA A ANALIZAR
-banda = parameters["banda_mu"] # Banda de frecuencias a filtrar (Hz)
-#indices donde freqs sea mayor a 10 y menor a 12
-i_freqs = np.where((freqs >= banda[0]) & (freqs <= banda[1]))[0]
+for banda in [parameters["banda_mu"], parameters["banda_beta"], parameters["banda_completa"]]:
+    # banda = parameters["banda_mu"] # Banda de frecuencias a filtrar (Hz)
+    #indices donde freqs sea mayor a 10 y menor a 12
+    i_freqs = np.where((freqs >= banda[0]) & (freqs <= banda[1]))[0]
 
-tfr_i_filt_c3 = tfr_izq_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
-tfr_i_filt_c4 = tfr_izq_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
-tfr_d_filt_c3 = tfr_der_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
-tfr_d_filt_c4 = tfr_der_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
+    tfr_i_filt_c3 = tfr_izq_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
+    tfr_i_filt_c4 = tfr_izq_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
+    tfr_d_filt_c3 = tfr_der_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
+    tfr_d_filt_c4 = tfr_der_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).mean(0)
 
-tfr_i_filt_c3_std = tfr_izq_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
-tfr_i_filt_c4_std = tfr_izq_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
-tfr_d_filt_c3_std = tfr_der_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
-tfr_d_filt_c4_std = tfr_der_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
+    tfr_i_filt_c3_std = tfr_izq_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
+    tfr_i_filt_c4_std = tfr_izq_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
+    tfr_d_filt_c3_std = tfr_der_base.data[:,cluster_izq,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
+    tfr_d_filt_c4_std = tfr_der_base.data[:,cluster_der,:,:].mean(0)[:,i_freqs,:].mean(0).std(0)
 
-window_size = 512
-tfr_d_filt_c4_smooth = np.convolve(tfr_d_filt_c4, np.ones(window_size)/window_size, mode='same')
-tfr_d_filt_c3_smooth = np.convolve(tfr_d_filt_c3, np.ones(window_size)/window_size, mode='same')
-tfr_i_filt_c4_smooth = np.convolve(tfr_i_filt_c4, np.ones(window_size)/window_size, mode='same')
-tfr_i_filt_c3_smooth = np.convolve(tfr_i_filt_c3, np.ones(window_size)/window_size, mode='same')
+    window_size = 512
+    tfr_d_filt_c4_smooth = np.convolve(tfr_d_filt_c4, np.ones(window_size)/window_size, mode='same')
+    tfr_d_filt_c3_smooth = np.convolve(tfr_d_filt_c3, np.ones(window_size)/window_size, mode='same')
+    tfr_i_filt_c4_smooth = np.convolve(tfr_i_filt_c4, np.ones(window_size)/window_size, mode='same')
+    tfr_i_filt_c3_smooth = np.convolve(tfr_i_filt_c3, np.ones(window_size)/window_size, mode='same')
 
-tfr_i_filt_c3_std_smooth = np.convolve(tfr_i_filt_c3_std, np.ones(window_size)/window_size, mode='same')
-tfr_i_filt_c4_std_smooth = np.convolve(tfr_i_filt_c4_std, np.ones(window_size)/window_size, mode='same')
-tfr_d_filt_c3_std_smooth = np.convolve(tfr_d_filt_c3_std, np.ones(window_size)/window_size, mode='same')
-tfr_d_filt_c4_std_smooth = np.convolve(tfr_d_filt_c4_std, np.ones(window_size)/window_size, mode='same')
+    tfr_i_filt_c3_std_smooth = np.convolve(tfr_i_filt_c3_std, np.ones(window_size)/window_size, mode='same')
+    tfr_i_filt_c4_std_smooth = np.convolve(tfr_i_filt_c4_std, np.ones(window_size)/window_size, mode='same')
+    tfr_d_filt_c3_std_smooth = np.convolve(tfr_d_filt_c3_std, np.ones(window_size)/window_size, mode='same')
+    tfr_d_filt_c4_std_smooth = np.convolve(tfr_d_filt_c4_std, np.ones(window_size)/window_size, mode='same')
 
-## ********** GRAFICAMOS LOS RESULTADOS **********
-c_ei, c_ed = parameters["colores_clases"] #colores para electrodos izquierdo y derecho
-cmap = parameters["cmap_topomaps"]
-fmin, fmax = banda
-ti, tf = -3, tmax
-times = tfr_izq.times
-i_times = np.where((times >= ti) & (times <= tf))[0]
+    ## ********** GRAFICAMOS LOS RESULTADOS **********
+    c_ei, c_ed = parameters["colores_clases"] #colores para electrodos izquierdo y derecho
+    cmap = parameters["cmap_topomaps"]
+    fmin, fmax = banda
+    ti, tf = parameters["tiempo_plots"] #tiempo inicial y final para graficar
+    times = tfr_izq.times
+    i_times = np.where((times >= ti) & (times <= tf))[0]
 
-### *********** GRAFICAMOS LOS RESULTADOS **********
-fig, axes = plt.subplots(1, 4, figsize=(17, 6))
-axes[0].plot(times[i_times], tfr_i_filt_c3_smooth[i_times], label="IZQ", color=c_ei, linewidth=2)
-axes[0].fill_between(
-    times[i_times],
-    tfr_i_filt_c3_smooth[i_times] - tfr_i_filt_c3_std_smooth[i_times],
-    tfr_i_filt_c3_smooth[i_times] + tfr_i_filt_c3_std_smooth[i_times],
-    color=c_ei,
-    alpha=0.1,)
-axes[0].plot(times[i_times], tfr_d_filt_c3_smooth[i_times], label="DER", color=c_ed, linewidth=2)
-axes[0].fill_between(
-    times[i_times],
-    tfr_d_filt_c3_smooth[i_times] - tfr_d_filt_c3_std_smooth[i_times],
-    tfr_d_filt_c3_smooth[i_times] + tfr_d_filt_c3_std_smooth[i_times],
-    color=c_ed,
-    alpha=0.1,)
-axes[0].set_xlabel('Tiempo (s)')
-axes[0].set_ylabel('Cambio potencia (%)')
-#agrego una sombra entre los tiempos -0.5 y 0
-ymin = min((tfr_d_filt_c3_smooth[i_times]-tfr_d_filt_c3_std_smooth[i_times]).min(),
-           (tfr_i_filt_c3_smooth[i_times]-tfr_i_filt_c3_std_smooth[i_times]).min())
-ymax = max((tfr_d_filt_c3_smooth[i_times]+tfr_d_filt_c3_std_smooth[i_times]).max(),
-           (tfr_i_filt_c3_smooth[i_times]+tfr_i_filt_c3_std_smooth[i_times]).max())
+    ### *********** GRAFICAMOS LOS RESULTADOS **********
+    fig, axes = plt.subplots(1, 4, figsize=(17, 6))
+    # axes[0].plot(times[i_times], tfr_i_filt_c3_smooth[i_times], label="IZQ", color=c_ei, linewidth=2)
+    # axes[0].fill_between(
+    #     times[i_times],
+    #     tfr_i_filt_c3_smooth[i_times] - tfr_i_filt_c3_std_smooth[i_times],
+    #     tfr_i_filt_c3_smooth[i_times] + tfr_i_filt_c3_std_smooth[i_times],
+    #     color=c_ei,
+    #     alpha=0.1,)
+    axes[0].plot(times[i_times], tfr_d_filt_c3_smooth[i_times], label="DER", color=c_ed, linewidth=2)
+    axes[0].fill_between(
+        times[i_times],
+        tfr_d_filt_c3_smooth[i_times] - tfr_d_filt_c3_std_smooth[i_times],
+        tfr_d_filt_c3_smooth[i_times] + tfr_d_filt_c3_std_smooth[i_times],
+        color=c_ed,
+        alpha=0.1,)
+    axes[0].set_xlabel('Tiempo (s)')
+    axes[0].set_ylabel('Cambio potencia (%)')
+    #agrego una sombra entre los tiempos -0.25 y 0
+    # ymin = min((tfr_d_filt_c3_smooth[i_times]-tfr_d_filt_c3_std_smooth[i_times]).min(),
+    #         (tfr_i_filt_c3_smooth[i_times]-tfr_i_filt_c3_std_smooth[i_times]).min())
+    # ymax = max((tfr_d_filt_c3_smooth[i_times]+tfr_d_filt_c3_std_smooth[i_times]).max(),
+    #         (tfr_i_filt_c3_smooth[i_times]+tfr_i_filt_c3_std_smooth[i_times]).max())
 
-axes[0].fill_between(times, ymin, ymax, where=(times >= -0.5) & (times <= 0), color='#725ba0', alpha=0.1)
-axes[0].fill_between(times, ymin, ymax, where=(times >= 0) & (times<= 2), color='grey', alpha=0.1)
-axes[0].axvline(0, color='k', linestyle='-', label='Cue')
-axes[0].axvline(-0.5, color='grey', linestyle='--')
-axes[0].axvline(2, color='grey', linestyle='--')
-axes[0].axhline(0, color='grey', linestyle='--')
-axes[0].spines['top'].set_visible(False)
-axes[0].spines['right'].set_visible(False)
-axes[0].legend(loc="upper right") 
-axes[0].set_title("Cluster lado izquierdo")
+    # axes[0].fill_between(times, ymin, ymax, where=(times >= -0.25) & (times <= 0), color='#725ba0', alpha=0.1)
+    # axes[0].fill_between(times, ymin, ymax, where=(times >= 0) & (times<= 2), color='grey', alpha=0.1)
+    axes[0].axvline(0, color='k', linestyle='-', label='Cue')
+    # axes[0].axvline(-0.25, color='grey', linestyle='--')
+    axes[0].axvline(2, color='grey', linestyle='--')
+    axes[0].axhline(0, color='grey', linestyle='--')
+    axes[0].spines['top'].set_visible(False)
+    axes[0].spines['right'].set_visible(False)
+    axes[0].legend(loc="upper right") 
+    axes[0].set_title("Cluster lado izquierdo")
 
-axes[3].plot(times[i_times], tfr_i_filt_c4_smooth[i_times], label="IZQ", color=c_ei, linewidth=2)
-axes[3].fill_between(
-    times[i_times],
-    tfr_i_filt_c4_smooth[i_times] - tfr_i_filt_c4_std_smooth[i_times],
-    tfr_i_filt_c4_smooth[i_times] + tfr_i_filt_c4_std_smooth[i_times],
-    color=c_ei,
-    alpha=0.1,)
-axes[3].plot(times[i_times], tfr_d_filt_c4_smooth[i_times], label="DER", color=c_ed, linewidth=2)
-axes[3].fill_between(
-    times[i_times],
-    tfr_d_filt_c4_smooth[i_times] - tfr_d_filt_c4_std_smooth[i_times],
-    tfr_d_filt_c4_smooth[i_times] + tfr_d_filt_c4_std_smooth[i_times],
-    color=c_ed,
-    alpha=0.1,)
-axes[3].set_xlabel('Tiempo (s)')
-axes[3].set_ylabel('Cambio potencia (%)')
-#agrego una sombra entre los tiempos -0.5 y 0
-axes[3].yaxis.set_label_position("right")
+    axes[3].plot(times[i_times], tfr_i_filt_c4_smooth[i_times], label="IZQ", color=c_ei, linewidth=2)
+    axes[3].fill_between(
+        times[i_times],
+        tfr_i_filt_c4_smooth[i_times] - tfr_i_filt_c4_std_smooth[i_times],
+        tfr_i_filt_c4_smooth[i_times] + tfr_i_filt_c4_std_smooth[i_times],
+        color=c_ei,
+        alpha=0.1,)
+    # axes[3].plot(times[i_times], tfr_d_filt_c4_smooth[i_times], label="DER", color=c_ed, linewidth=2)
+    # axes[3].fill_between(
+    #     times[i_times],
+    #     tfr_d_filt_c4_smooth[i_times] - tfr_d_filt_c4_std_smooth[i_times],
+    #     tfr_d_filt_c4_smooth[i_times] + tfr_d_filt_c4_std_smooth[i_times],
+    #     color=c_ed,
+    #     alpha=0.1,)
+    axes[3].set_xlabel('Tiempo (s)')
+    axes[3].set_ylabel('Cambio potencia (%)')
+    #agrego una sombra entre los tiempos -0.25 y 0
+    axes[3].yaxis.set_label_position("right")
 
-ymin = min((tfr_d_filt_c4_smooth[i_times] - tfr_d_filt_c4_std_smooth[i_times]).min(),
-           (tfr_i_filt_c4_smooth[i_times] - tfr_i_filt_c4_std_smooth[i_times]).min())
-ymax = max((tfr_d_filt_c4_smooth[i_times] + tfr_d_filt_c4_std_smooth[i_times]).max(),
-           (tfr_i_filt_c4_smooth[i_times] + tfr_i_filt_c4_std_smooth[i_times]).max())
+    # ymin = min((tfr_d_filt_c4_smooth[i_times] - tfr_d_filt_c4_std_smooth[i_times]).min(),
+    #         (tfr_i_filt_c4_smooth[i_times] - tfr_i_filt_c4_std_smooth[i_times]).min())
+    # ymax = max((tfr_d_filt_c4_smooth[i_times] + tfr_d_filt_c4_std_smooth[i_times]).max(),
+    #         (tfr_i_filt_c4_smooth[i_times] + tfr_i_filt_c4_std_smooth[i_times]).max())
 
-axes[3].fill_between(times, ymin, ymax, where=(times >= -0.5) & (times <= 0), color='#725ba0', alpha=0.1)
-axes[3].fill_between(times, ymin, ymax, where=(times >= 0) & (times <= 2), color='grey', alpha=0.1)
-axes[3].axvline(0, color='k', linestyle='-', label='Cue')
-axes[3].axvline(-0.5, color='grey', linestyle='--')
-axes[3].axvline(2, color='grey', linestyle='--')
-axes[3].axhline(0, color='grey', linestyle='--')
-axes[3].spines['top'].set_visible(False)
-axes[3].spines['left'].set_visible(False)
-axes[3].yaxis.tick_right()
-axes[3].legend(loc="upper right")
-axes[3].set_title("Cluster lado derecho")
+    # axes[3].fill_between(times, ymin, ymax, where=(times >= -0.25) & (times <= 0), color='#725ba0', alpha=0.1)
+    # axes[3].fill_between(times, ymin, ymax, where=(times >= 0) & (times <= 2), color='grey', alpha=0.1)
+    axes[3].axvline(0, color='k', linestyle='-', label='Cue')
+    # axes[3].axvline(-0.25, color='grey', linestyle='--')
+    axes[3].axvline(2, color='grey', linestyle='--')
+    axes[3].axhline(0, color='grey', linestyle='--')
+    axes[3].spines['top'].set_visible(False)
+    axes[3].spines['left'].set_visible(False)
+    axes[3].yaxis.tick_right()
+    axes[3].legend(loc="upper right")
+    axes[3].set_title("Cluster lado derecho")
 
-tfr_izq.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin=0, tmax=1,fmin=fmin,fmax=fmax,
-                                                                            colorbar=True,
-                                                                            cmap=cmap,
-                                                                            show=False,
-                                                                            axes=axes[1],contours=8,cbar_fmt="%.2f")
-tfr_der.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin=0, tmax=1,fmin=fmin,fmax=fmax,
-                                                                            colorbar=True,
-                                                                            cmap=cmap,show=False,
-                                                                            axes=axes[2],contours=8,cbar_fmt="%.2f")
-axes[1].set_title("IZQUIERDA")
-axes[2].set_title("DERECHA")
-plt.tight_layout()
-fig.canvas.manager.set_window_title(f"Análisis de tiempo frecuencia - Banda {banda[0]}-{banda[1]}Hz - {tipo_sesion} - Sujeto {sujeto}")
-if save:
-    plt.savefig(os.path.join(root_path, f"timefreq{sujeto}_{tipo_sesion}_{banda}.png"), dpi=350)
-if show:
-    plt.show()
-#elimino la figura
-plt.close(fig)
+    tfr_izq.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin=0, tmax=1,fmin=fmin,fmax=fmax,
+                                                                                colorbar=True,
+                                                                                cmap=cmap,
+                                                                                show=False,
+                                                                                axes=axes[1],contours=8,cbar_fmt="%.2f")
+    tfr_der.average().apply_baseline(baseline_rest,mode="percent").plot_topomap(tmin=0, tmax=1,fmin=fmin,fmax=fmax,
+                                                                                colorbar=True,
+                                                                                cmap=cmap,show=False,
+                                                                                axes=axes[2],contours=8,cbar_fmt="%.2f")
+    axes[1].set_title("IZQUIERDA")
+    axes[2].set_title("DERECHA")
+    plt.tight_layout()
+    fig.canvas.manager.set_window_title(f"Análisis de tiempo frecuencia - Banda {banda[0]}-{banda[1]}Hz - {tipo_sesion} - Sujeto {sujeto}")
+    if save:
+        plt.savefig(os.path.join(root_path, f"timefreq_s{sujeto}_{tipo_sesion}_{banda}.png"), dpi=350)
+    if show:
+        plt.show()
+    #elimino la figura
+    plt.close(fig)

@@ -1,6 +1,6 @@
 {
-    "sujeto": 1,
-    "sesion": 1,
+    "sujeto": 3,
+    "sesion": 2,
     "electrodos": [
         "C3",
         "C4"
@@ -62,7 +62,7 @@
         "CP6"
     ],
     "duracion_trial": [
-        -3,
+        -4,
         4
     ],
     "banda_completa": [
@@ -80,8 +80,8 @@
     "window_size": 512,
     "smoothing_window": 51,
     "baseline_rest": [
-        -2.5,
-        -0.5
+        -2.25,
+        -0.25
     ],
     "baseline_pretask": [
         -0.5,
@@ -104,6 +104,10 @@
         "#5b0672"
     ],
     "confidence": 0.95,
-    "show_figures": true,
-    "save_figures": true
+    "show_figures": false,
+    "save_figures": true,
+    "tiempo_plots": [
+        -1,
+        4
+    ]
 }

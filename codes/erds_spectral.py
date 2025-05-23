@@ -257,10 +257,10 @@ axes[3].spines['right'].set_visible(False)
 axes[3].tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
 axes[3].legend(loc="upper right", fontsize=label_fs)
 axes[3].set_xlabel("Frecuencia (Hz)", fontsize=label_fs)
-
+fig.canvas.manager.set_window_title(f"IZQUIERDA {tipo_sesion} - Suj. {sujeto}")
 plt.suptitle(f"IZQUIERDA {tipo_sesion} - Suj. {sujeto}", fontsize=title_fontsize)
 if save:
-    plt.savefig(os.path.join(root_path, f"spectral_izq_{sujeto}_{tipo_sesion}.png"), dpi=350)
+    plt.savefig(os.path.join(root_path, f"spectral_izq_s{sujeto}_{tipo_sesion}.png"), dpi=350)
 if show:
     plt.show()
 plt.close(fig)
@@ -350,10 +350,10 @@ axes[3].spines['right'].set_visible(False)
 axes[3].tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
 axes[3].legend(loc="upper right", fontsize=label_fs)
 axes[3].set_xlabel("Frecuencia (Hz)", fontsize=label_fs)
-
 plt.suptitle(f"DERECHA {tipo_sesion} - Suj. {sujeto}", fontsize=title_fontsize)
+fig.canvas.manager.set_window_title(f"DERECHA {tipo_sesion} - Suj. {sujeto}")
 if save:
-    plt.savefig(os.path.join(root_path, f"spectral_der_{sujeto}_{tipo_sesion}.png"), dpi=350)
+    plt.savefig(os.path.join(root_path, f"spectral_der_s{sujeto}_{tipo_sesion}.png"), dpi=350)
 if show:
     plt.show()
 plt.close(fig)
