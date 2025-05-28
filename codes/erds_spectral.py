@@ -353,7 +353,7 @@ axes[3].set_xlabel("Frecuencia (Hz)", fontsize=label_fs)
 plt.suptitle(f"DERECHA {tipo_sesion} - Suj. {sujeto}", fontsize=title_fontsize)
 fig.canvas.manager.set_window_title(f"DERECHA {tipo_sesion} - Suj. {sujeto}")
 if save:
-    plt.savefig(os.path.join(root_path, f"spectral_der_s{sujeto}_{tipo_sesion}.png"), dpi=350)
+    plt.savefig(os.path.join(root_path, f"spectral_der_s{sujeto}_{tipo_sesion}.png"), dpi=350, bbox_inches='tight')
 if show:
     plt.show()
 plt.close(fig)

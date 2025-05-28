@@ -210,7 +210,7 @@ for banda in [parameters["banda_mu"], parameters["banda_beta"], parameters["band
     plt.tight_layout()
     fig.canvas.manager.set_window_title(f"Análisis de tiempo frecuencia - Banda {banda[0]}-{banda[1]}Hz - {tipo_sesion} - Sujeto {sujeto}")
     if save:
-        plt.savefig(os.path.join(root_path, f"timefreq_s{sujeto}_{tipo_sesion}_{banda}.png"), dpi=350)
+        plt.savefig(os.path.join(root_path, f"timefreq_s{sujeto}_{tipo_sesion}_{banda}.png"), dpi=350, bbox_inches='tight')
     if show:
         plt.show()
     #elimino la figura

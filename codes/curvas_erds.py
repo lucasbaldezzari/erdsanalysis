@@ -112,7 +112,7 @@ for banda in ( parameters["banda_mu"], parameters["banda_beta"],parameters["band
     axes[0].spines['right'].set_visible(False)
     axes[0].set_xlabel("Tiempo (s)")
     axes[0].set_ylabel(r"Cambio voltaje (%)")
-    axes[0].set_title(f"EDRS% Cluster Izq - ({l_freq}-{h_freq})Hz - Sesión {tipo_sesion}", fontsize=14)
+    axes[0].set_title(f"ERDS% Cluster Izq - ({l_freq}-{h_freq})Hz - {tipo_sesion}", fontsize=12)
     std_izq = erds_izq[cluster_izq].std(0)[idx]
     std_der = erds_der[cluster_izq].std(0)[idx]
     mean_izq = erds_izq[cluster_izq].mean(0)[idx]
@@ -145,7 +145,7 @@ for banda in ( parameters["banda_mu"], parameters["banda_beta"],parameters["band
     axes[1].yaxis.set_label_position("right")
     axes[1].set_xlabel("Tiempo (s)")
     axes[1].set_ylabel(r"Cambio voltaje (%)")
-    axes[1].set_title(f"EDRS% Cluster DER - ({l_freq}-{h_freq})Hz - Sesión {tipo_sesion}", fontsize=14)
+    axes[1].set_title(f"ERDS% Cluster DER - ({l_freq}-{h_freq})Hz - {tipo_sesion}", fontsize=12)
     std_izq = erds_izq[cluster_der].std(0)[idx]
     std_der = erds_der[cluster_der].std(0)[idx]
     mean_izq = erds_izq[cluster_der].mean(0)[idx]
@@ -157,7 +157,7 @@ for banda in ( parameters["banda_mu"], parameters["banda_beta"],parameters["band
     axes[1].legend(loc="lower right")
     fig.canvas.manager.set_window_title(f"ERDS Voltaje Sujeto {sujeto} - {tipo_sesion} - Banda {banda}.png")
     if save:
-        plt.savefig(os.path.join(root_path, f"erds_voltaje_s{sujeto}_{tipo_sesion}_{banda}.png"), dpi=350)
+        plt.savefig(os.path.join(root_path, f"erds_voltaje_s{sujeto}_{tipo_sesion}_{banda}.png"), dpi=350, bbox_inches='tight')
     if show:
         plt.show()
     plt.close(fig)
