@@ -12,7 +12,7 @@ import pandas as pd
 with open('codes\\parameters.json', 'r') as f:
     parameters = json.load(f)
 
-sujetos = [1,2,4,5,6,7,8,9]#parameters["sujeto"]
+sujetos = [1]#[1,2,4,5,6,7,8,9]#parameters["sujeto"]
 sesiones = [1,2]#parameters["sesion"]
 
 for sujeto in sujetos:
@@ -91,7 +91,6 @@ for sujeto in sujetos:
             dict_df = {f"izq_{name_banda}":df.copy(), f"der_{name_banda}":df.copy()}
             for clase, erds in zip(dict_df.keys(),[erds_izq_avg, erds_der_avg]):
                 for momento, base in zip(["task","postask"],[baseline_task, baseline_postask]):
-                    print(f"Calculando {clase} {momento}")
                     ti, tf = base
                     indexes = np.where((times>=ti) & (times<=tf))
                     min, max = erds[indexes].min(), erds[indexes].max()
@@ -107,4 +106,6 @@ for sujeto in sujetos:
 
         df_final = pd.concat(dict_dfs_bandas)
         ##guardo dataframe
-        df_final.to_csv(os.path.join(root_path, f"lats_suj{sujeto}_ses{sesion}.csv"), index=False)
+        ##redondeo a dos cifras
+        df_final = df_final.round(2)
+        df_final.to_csv(os.path.join(root_path, f"lats_suj{sujeto}_ses{sesion}.csv"), index=True)
