@@ -635,3 +635,20 @@ def getIntervalos(freqs, paso):
         for i in range(len(lista_intervalos)):
             lista_intervalos[i] = sorted(lista_intervalos[i])
     return lista_intervalos
+
+def reacomodar_datos(datos, banda, extremo, periodo, col_name_original, col_name_nuevo):
+    """
+    Función para fusionar los datos de ERDS% en un DataFrame
+
+    Args:
+    - datos (DataFrame): DataFrame con los datos de ERDS%
+    - banda (str): Banda de frecuencia ('mu' o 'beta')
+    - extremo (str): Tipo de extremo ('min' o 'max')
+    - periodo (str): Período de tiempo ('task' o 'postask')
+    Returns:
+    - DataFrame: DataFrame reacomodado con columnas 'Sujeto', 'Sesión', 'Clase', 'ERDS%', 'Banda', 'Tipo', 'Período'
+    """
+    # col_name = f"{banda}_{extremo}_{periodo}"
+    return datos[['sujeto', 'sesion', 'clase', col_name_original]].rename(
+        columns={col_name_original: col_name_nuevo, 'sujeto': 'Sujeto', 'sesion': 'Sesión', 'clase': 'Clase'}
+        ).assign(Banda=banda, Tipo=extremo, Período=periodo)
