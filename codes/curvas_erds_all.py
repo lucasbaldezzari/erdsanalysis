@@ -12,7 +12,7 @@ with open('codes\\parameters.json', 'r') as f:
     parameters = json.load(f)
 
 sujetos = [1,2,4,5,6,7,8,9] #parameters["sujeto"]
-sesion = parameters["sesion"]
+sesion = 2#parameters["sesion"]
 tipo_sesion = "Ejecutada" if sesion == 1 else "Imaginada"
 sfreq = 512
 channels_to_drop = parameters["channels_to_drop"]
@@ -30,7 +30,7 @@ if not os.path.exists(root_path):
 
 data = concatenateSubjectsEEG(sujetos, sesion, apply_ica=True).drop_channels(channels_to_drop, "ignore")
 
-for banda in ( parameters["banda_mu"], parameters["banda_beta"],parameters["banda_completa"]):
+for banda_name, banda in zip(["mu","beta","completa"],[parameters["banda_mu"], parameters["banda_beta"],parameters["banda_completa"]]):
     eeg_concatenados = data.copy()
     # banda = parameters["banda_mu"]
     l_freq, h_freq = banda
@@ -52,11 +52,6 @@ for banda in ( parameters["banda_mu"], parameters["banda_beta"],parameters["band
 
     raw_eventos = mne.events_from_annotations(eeg_concatenados, event_id=event_ids)
     eventos = mne.pick_events(raw_eventos[0], include=[1,2])
-
-    # epocas.plot(scalings = 80,show=True, block=True,
-    #                           events=eventos,
-    #                           event_id=event_ids,
-    #                           event_color=dict(IZQUIERDA="red", DERECHA="blue"))
 
     chs_names = parameters["electrodos"]
     chizq_n = chs_names[0] #nombre del canal izquierdo
@@ -83,27 +78,20 @@ for banda in ( parameters["banda_mu"], parameters["banda_beta"],parameters["band
     erds_izq = getHilbertERDS(clase_izquierda, baseline, apply_smooth=True, window_smoothing=ws, mean_trials=True)
     erds_der = getHilbertERDS(clase_derecha, baseline, apply_smooth=True, window_smoothing=ws, mean_trials=True)
 
-
-    c_ei, c_ed = parameters["colores_clases"] #colores para electrodos izquierdo y derecho
+    c_ed,c_ei = parameters["colores_clases"] #colores para electrodos izquierdo y derecho
     cmap = parameters["cmap_topomaps"]
-    sombra_fadein = "#fdf88c"
+    sombra_fadein = "#abd6fe"
     times = clase_izquierda.times
     ti, tf = parameters["tiempo_plots"] #tiempo inicial y final para graficar
     idx = np.where((times >= ti) & (times <= tf))[0]
     i_times = np.where((times >= ti) & (times <= tf))[0]
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-    # axes[0].plot(times[idx], erds_izq[cluster_izq].mean(0)[idx], label="IZQUIERDA", color=c_ei, linewidth=2)
-    # axes[0].fill_between(
-    #     times[idx],
-    #     erds_izq[cluster_izq].mean(0)[idx] - erds_izq[cluster_izq].std(0)[idx],
-    #     erds_izq[cluster_izq].mean(0)[idx] + erds_izq[cluster_izq].std(0)[idx],
-    #     color=c_ei,
-    #     alpha=0.3,)
-    axes[0].plot(times[idx], erds_der[cluster_izq].mean(0)[idx], label="DERECHA", color=c_ed, linewidth=2)
+
+    axes[0].plot(times[idx], erds_izq[cluster_der].mean(0)[idx], color=c_ed, linewidth=2)
     axes[0].fill_between(
         times[idx],
-        erds_der[cluster_izq].mean(0)[idx] - erds_der[cluster_izq].std(0)[idx],
-        erds_der[cluster_izq].mean(0)[idx] + erds_der[cluster_izq].std(0)[idx],
+        erds_izq[cluster_der].mean(0)[idx] - erds_izq[cluster_der].std(0)[idx],
+        erds_izq[cluster_der].mean(0)[idx] + erds_izq[cluster_der].std(0)[idx],
         color=c_ed,
         alpha=0.3,)
     axes[0].axvline(0, color="k", linestyle="--", label="Cue onset")
@@ -111,32 +99,26 @@ for banda in ( parameters["banda_mu"], parameters["banda_beta"],parameters["band
     axes[0].spines['top'].set_visible(False)
     axes[0].spines['right'].set_visible(False)
     axes[0].set_xlabel("Tiempo (s)")
-    axes[0].set_ylabel(r"Cambio voltaje (%)")
-    axes[0].set_title(f"ERDS% Cluster Izq - ({l_freq}-{h_freq})Hz - {tipo_sesion}", fontsize=12)
-    std_izq = erds_izq[cluster_izq].std(0)[idx]
+    axes[0].set_ylabel(r"Potencia relativa (%)")
+    axes[0].set_title(f"ERDS%\nIZQUIERDA {tipo_sesion} - Banda {banda_name}", fontsize=12)
+    std_izq = erds_izq[cluster_der].std(0)[idx]
     std_der = erds_der[cluster_izq].std(0)[idx]
-    mean_izq = erds_izq[cluster_izq].mean(0)[idx]
+    mean_izq = erds_izq[cluster_der].mean(0)[idx]
     mean_der = erds_der[cluster_izq].mean(0)[idx]
-    ymin = min(mean_izq.min() - std_izq.min(), mean_der.min() - std_der.min())
-    ymax = max(mean_izq.max() + std_izq.max(), mean_der.max() + std_der.max())
+    ymin = mean_izq.min() - std_izq.min()
+    ymax = mean_izq.max() + std_izq.max()
     axes[0].fill_between(times, ymin, ymax, where=(times >= -0.25) & (times <= 0), color=sombra_fadein, alpha=0.2, label = "fade-in")
     axes[0].fill_between(times, ymin, ymax, where=(times >= 0) & (times<= 2), color="grey", alpha=0.2, label="Tarea")
     axes[0].legend(loc="lower right")
 
-    axes[1].plot(times[idx], erds_izq[cluster_der].mean(0)[idx], label="IZQUIERDA", color=c_ei, linewidth=2)
+    axes[1].plot(times[idx], erds_der[cluster_izq].mean(0)[idx], color=c_ei, linewidth=2)
     axes[1].fill_between(
         times[idx],
-        erds_izq[cluster_der].mean(0)[idx] - erds_izq[cluster_der].std(0)[idx],
-        erds_izq[cluster_der].mean(0)[idx] + erds_izq[cluster_der].std(0)[idx],
+        erds_der[cluster_izq].mean(0)[idx] - erds_der[cluster_izq].std(0)[idx],
+        erds_der[cluster_izq].mean(0)[idx] + erds_der[cluster_izq].std(0)[idx],
         color=c_ei,
         alpha=0.3,)
-    # axes[1].plot(times[idx], erds_der[cluster_der].mean(0)[idx], label="DERECHA", color=c_ed, linewidth=2)
-    # axes[1].fill_between(
-    #     times[idx],
-    #     erds_der[cluster_der].mean(0)[idx] - erds_der[cluster_der].std(0)[idx],
-    #     erds_der[cluster_der].mean(0)[idx] + erds_der[cluster_der].std(0)[idx],
-    #     color=c_ed,
-    #     alpha=0.3,)
+
     axes[1].axvline(0, color="k", linestyle="--", label="Cue onset")
     axes[1].axhline(0, color="grey", linestyle="--")
     axes[1].spines['top'].set_visible(False)
@@ -144,18 +126,18 @@ for banda in ( parameters["banda_mu"], parameters["banda_beta"],parameters["band
     axes[1].yaxis.tick_right()
     axes[1].yaxis.set_label_position("right")
     axes[1].set_xlabel("Tiempo (s)")
-    axes[1].set_ylabel(r"Cambio voltaje (%)")
-    axes[1].set_title(f"ERDS% Cluster DER - ({l_freq}-{h_freq})Hz - {tipo_sesion}", fontsize=12)
+    axes[1].set_ylabel(r"Potencia relativa (%)")
+    axes[1].set_title(f"ERDS%\nDERECHA {tipo_sesion} - Banda {banda_name}", fontsize=12)
     std_izq = erds_izq[cluster_der].std(0)[idx]
-    std_der = erds_der[cluster_der].std(0)[idx]
+    std_der = erds_der[cluster_izq].std(0)[idx]
     mean_izq = erds_izq[cluster_der].mean(0)[idx]
-    mean_der = erds_der[cluster_der].mean(0)[idx]
-    ymin = min(mean_izq.min() - std_izq.min(), mean_der.min() - std_der.min())
-    ymax = max(mean_izq.max() + std_izq.max(), mean_der.max() + std_der.max())
+    mean_der = erds_der[cluster_izq].mean(0)[idx]
+    ymin = mean_der.min() - std_der.min()
+    ymax = mean_der.max() + std_der.max()
     axes[1].fill_between(times, ymin, ymax, where=(times >= -0.25) & (times <= 0), color=sombra_fadein, alpha=0.2, label = "fade-in")
     axes[1].fill_between(times, ymin, ymax, where=(times >= 0) & (times<= 2), color="gray", alpha=0.2, label="Tarea")
     axes[1].legend(loc="lower right")
-    fig.canvas.manager.set_window_title(f"ERDS Grand Average - {tipo_sesion} - Banda {banda}.png")
+    fig.canvas.manager.set_window_title(f"ERDS GRAND AVERAGE - {tipo_sesion} - Banda {banda}.png")
     if save:
         plt.savefig(os.path.join(root_path, f"erds_voltaje_ga_{tipo_sesion}_{banda}.png"), dpi=350, bbox_inches='tight')
     if show:
