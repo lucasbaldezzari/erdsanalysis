@@ -193,6 +193,7 @@ def generar_heatmap(df, medida_nombre, save=False, show=True, cmap="coolwarm", f
     plt.title(f"Heatmap de {medida_nombre} de ERDS% por sujeto y condición")
     plt.xlabel("Condición (Clase, Banda, Período)")
     plt.ylabel("Sujeto")
+    plt.xticks(rotation=15) 
     plt.tight_layout()
     if save:
         plt.savefig(f"{root_path}\\heatmap_erds_{medida_nombre}.png", dpi=300)
