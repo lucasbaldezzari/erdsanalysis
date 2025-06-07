@@ -1,0 +1,7 @@
+Tipo,Comparacion,Media ejecutada,Media imaginada,t-p,Wilcoxon-p,Media task,Media postask,Media mu,Media beta
+min,ejecutada vs imaginada,-11.74,-15.55171875,0.081848707,0.078125,,,,
+min,task vs postask,,,0.24215832587201477,0.3828125,-14.419375,-12.87234375,,
+min,mu vs beta,,,0.019073088265001575,0.0390625,,,-15.306875,-11.98484375
+max,ejecutada vs imaginada,10.25828125,5.268281249999999,0.065201793,0.109375,,,,
+max,task vs postask,,,0.07540793,0.0390625,4.99328125,10.53328125,,
+max,mu vs beta,,,0.33284067220557145,0.7421875,,,8.419218749999999,7.10734375

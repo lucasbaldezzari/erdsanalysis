@@ -1,11 +1,12 @@
-import mne
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import json
 import os
 import pandas as pd
 from codes.utils import reacomodar_datos
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+from statsmodels.stats.anova import AnovaRM
+from scipy.stats import ttest_rel, wilcoxon
 
 sfreq = 512
 root_path = "datasets\\latencias"
@@ -17,8 +18,8 @@ print(full_data.columns)
 save = True
 show = False
 
-
-## 1. ********************* BOXPLOTS ****************************
+## 1. ********************** GRAFICOS ****************************
+## 1.1 ********************* BOXPLOTS ****************************
 """
 Distribuciones de los valores mínimos y máximos
 de ERDS% para cada banda (mu, beta), período (task, postask),
@@ -59,7 +60,7 @@ def plot_boxplot(data, x, y,hue,title, figsize=(8, 6), show=True, save=False, fi
     else:
         plt.close()
 
-colors = ["#76edb1","#D497E6"]#sns.color_palette("Greens", 2)
+colors = ["#8c8dd2","#dd8484"]#sns.color_palette("Greens", 2)
 
 ##Graficamos ERDS
 plot_boxplot(
@@ -83,11 +84,13 @@ plot_boxplot(
     filename=f'{root_path}\\erds_distribution_maximos',
     paleta=colors,)
 
-## 2. ********************* SCATTERPLOTS ****************************
+## 1.2 ********************* SCATTERPLOTS ****************************
 
 colors = ["#45b27b","#8c0db0"]#sns.color_palette("Greens", 2)
 
 erds_data["latencias"] = latencias_data["latencias"]
+##guardo erds_data con las latencias
+erds_data.to_csv(os.path.join(root_path, "erds_data_acomodada.csv"), index=False)
 
 def plot_scatter(data, filtro, x, y, col, row, hue, markers, height=4, aspect=1.5,
                  show=True, save=False, filename=None, palette=None):
@@ -101,8 +104,8 @@ def plot_scatter(data, filtro, x, y, col, row, hue, markers, height=4, aspect=1.
     hue=hue, markers=markers,
     facet_kws={'margin_titles': True},
     height=height, aspect=aspect,
-    scatter_kws={'alpha': 0.5, 's': 60},
-    palette=palette, sharex=False, sharey=False)
+    scatter_kws={'alpha': 0.5, 's': 70},
+    palette=palette, sharex=False, sharey=False, ci=None)
     g.axes[0,0].set_xlim(-0.1, 2.1)
     g.axes[0,1].set_xlim(-0.1, 2.1)
     g.axes[1, 0].set_xlim(1.9, 4.1)
@@ -151,7 +154,7 @@ plot_scatter(
     filename=f'{root_path}\\scatter_erds_max',
     palette=colors)
 
-## 3. ********************* HEATMAPS **************************** 
+## 1.3 ********************* HEATMAPS **************************** 
 
 heatmap_erds_min = erds_data[erds_data['Tipo'] == 'min'].pivot_table(
     index=['Sujeto'], columns=['Sesión', 'Clase', 'Banda', 'Período'], values='ERDS%')
@@ -183,3 +186,91 @@ heatmap_erds_min_pivot = generar_heatmap(erds_data[erds_data['Tipo'] == 'min'], 
                                          cmap="bwr", save=save, show=show)
 heatmap_erds_max_pivot = generar_heatmap(erds_data[erds_data['Tipo'] == 'max'], "máximos",
                                          cmap="bwr", save=save, show=show)
+
+## 2 ********************* ANALISIS ESTADÍSTICO **************************** 
+## 2.1 ********************* ANOVA ****************************
+
+anova_data = erds_data.copy()
+anova_data["Sujeto"] = anova_data["Sujeto"].astype(str)
+
+results = {}
+for tipo in ['min', 'max']:
+    df_anova = anova_data[anova_data['Tipo'] == tipo].copy()
+
+    # ANOVA de medidas repetidas con cuatro factores
+    aovrm = AnovaRM(
+        data=df_anova,
+        depvar='ERDS%',
+        subject='Sujeto',
+        within=['Clase', 'Sesión', 'Banda', 'Período']
+    )
+    results[tipo] = aovrm.fit()
+
+results['min'].summary(), results['max'].summary()
+
+##guardo los resultados de ANOVA en un archivo CSV
+indices = results['min'].anova_table.index
+columnas = results['min'].anova_table.columns
+datos_anova = results['min'].anova_table.values
+anova_results = pd.DataFrame(index=indices, columns=columnas, data=datos_anova)
+anova_results.to_csv(os.path.join(root_path, "anova_results_min.csv"))
+
+##repito para los resultados de max
+datos_anova_max = results['max'].anova_table.values
+anova_results_max = pd.DataFrame(index=results['max'].anova_table.index,
+                                  columns=results['max'].anova_table.columns,
+                                  data=datos_anova_max)
+anova_results_max.to_csv(os.path.join(root_path, "anova_results_max.csv"))
+
+## 2.2 ********************* Comparaciones pareadas ****************************
+
+# Almacenar resultados
+paired_results = []
+
+# Comparaciones por pares
+comparisons = [
+    ('Sesión', ['ejecutada', 'imaginada']),
+    ('Período', ['task', 'postask']),
+    ('Banda', ['mu', 'beta'])
+]
+
+# Para cada tipo (ERD / ERS)
+for tipo in ['min', 'max']:
+    data_tipo = erds_data[erds_data['Tipo'] == tipo]
+
+    for factor, (cond1, cond2) in comparisons:
+        # Agrupar por sujeto y condición
+        data_pivot = data_tipo.pivot_table(
+            index='Sujeto',
+            columns=factor,
+            values='ERDS%',
+            aggfunc='mean'
+        )
+
+        # Chequeo: ambas condiciones deben estar presentes
+        if cond1 in data_pivot.columns and cond2 in data_pivot.columns:
+            x = data_pivot[cond1].dropna()
+            y = data_pivot[cond2].dropna()
+
+            # Asegurar igualdad en longitud
+            if len(x) == len(y):
+                # Prueba t pareada
+                t_stat, t_p = ttest_rel(x, y)
+                # Wilcoxon (requiere al menos un valor distinto)
+                try:
+                    w_stat, w_p = wilcoxon(x, y)
+                except ValueError:
+                    w_stat, w_p = None, None
+
+                paired_results.append({
+                    'Tipo': tipo,
+                    'Comparación': f"{cond1} vs {cond2}",
+                    'Media {0}'.format(cond1): x.mean(),
+                    'Media {0}'.format(cond2): y.mean(),
+                    't-p': t_p,
+                    'Wilcoxon-p': w_p
+                })
+
+df_pareadas = pd.DataFrame(paired_results)
+# Guardar resultados de comparaciones pareadas
+df_pareadas.to_csv(os.path.join(root_path, "comparaciones_pareadas.csv"), index=False)
