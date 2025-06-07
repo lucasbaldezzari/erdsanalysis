@@ -60,29 +60,49 @@ def plot_boxplot(data, x, y,hue,title, figsize=(8, 6), show=True, save=False, fi
     else:
         plt.close()
 
-colors = ["#8c8dd2","#dd8484"]#sns.color_palette("Greens", 2)
+colores = ["#b16ae7","#fff47c"]#sns.color_palette("Greens", 2)
 
 ##Graficamos ERDS
 plot_boxplot(
-    data=erds_data[erds_data["Tipo"]=="min"],
+    data=erds_data[(erds_data["Tipo"] == "min") & (erds_data["Banda"] == "mu")],
     x='Período',
     y='ERDS%',
     hue='Sesión',
-    title='Distribución de ERDS% (mínimos) por Banda y Período',
+    title=r'Distribución de ERDS% (mínimos) banda $mu$',
     show=show, save=save,
-    filename=f'{root_path}\\erds_distribution_minimos',
-    paleta=colors,)
+    filename=f'{root_path}\\erds_distribution_minimos_mu',
+    paleta=colores,)
+
+plot_boxplot(
+    data=erds_data[(erds_data["Tipo"] == "min") & (erds_data["Banda"] == "beta")],
+    x='Período',
+    y='ERDS%',
+    hue='Sesión',
+    title=r'Distribución de ERDS% (mínimos) banda $beta$',
+    show=show, save=save,
+    filename=f'{root_path}\\erds_distribution_minimos_beta',
+    paleta=colores,legend_loc='upper right')
 
 ##Graficamos ERDS
 plot_boxplot(
-    data=erds_data[erds_data["Tipo"]=="max"],
+    data=erds_data[(erds_data["Tipo"] == "max") & (erds_data["Banda"] == "mu")],
     x='Período',
     y='ERDS%',
     hue='Sesión',
-    title='Distribución de ERDS% (máximos) por Banda y Período',
+    title=r'Distribución de ERDS% (máximos) banda $mu$',
     show=show, save=save,
-    filename=f'{root_path}\\erds_distribution_maximos',
-    paleta=colors,)
+    filename=f'{root_path}\\erds_distribution_maximos_mu',
+    paleta=colores,)
+
+plot_boxplot(
+    data=erds_data[(erds_data["Tipo"] == "max") & (erds_data["Banda"] == "beta")],
+    x='Período',
+    y='ERDS%',
+    hue='Sesión',
+    title=r'Distribución de ERDS% (máximos) banda $beta$',
+    show=show, save=save,
+    filename=f'{root_path}\\erds_distribution_maximos_beta',
+    paleta=colores,legend_loc='upper right')
 
 ## 1.2 ********************* SCATTERPLOTS ****************************
 
