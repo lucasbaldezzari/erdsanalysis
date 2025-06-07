@@ -11,8 +11,8 @@ import os
 with open('codes\\parameters.json', 'r') as f:
     parameters = json.load(f)
 
-sujeto = parameters["sujeto"]
-sesion = parameters["sesion"]
+sujeto = 9#parameters["sujeto"]
+sesion = 2#parameters["sesion"]
 tipo_sesion = "Ejecutada" if sesion == 1 else "Imaginada"
 sfreq = 512
 channels_to_drop = parameters["channels_to_drop"]
